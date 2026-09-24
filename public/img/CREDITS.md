@@ -16,3 +16,4 @@
 - stadium_crowd.jpg — PxHere (CC0) https://pxhere.com/en/photo/726322
 - typhoon.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-shanshan-approaches-japan-92573/
 - typhoon2.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-mindulle-over-japan-88616/
+- moon_color.jpg / moon_disp.jpg — NASA SVS CGI Moon Kit (Public Domain) https://svs.gsfc.nasa.gov/4720
