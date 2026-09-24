@@ -17,3 +17,15 @@
 - typhoon.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-shanshan-approaches-japan-92573/
 - typhoon2.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-mindulle-over-japan-88616/
 - moon_color.jpg / moon_disp.jpg — NASA SVS CGI Moon Kit (Public Domain) https://svs.gsfc.nasa.gov/4720
+- sumo1.jpg — Justin Scott (fligtar), Flickr (CC) https://www.flickr.com/photos/fligtar/8070181642/
+- sumo2.jpg — Darcy Moore, Flickr (CC) https://www.flickr.com/photos/darcymoore/24425281285
+- pingpong.jpg — PxHere (CC0) https://pxhere.com/en/photo/822217
+- soccer_jp.jpg — yoppy, Flickr (CC) https://www.flickr.com/photos/spilt-milk/2578657664/
+- soccer_matsumoto.jpg — PxHere (CC0) https://pxhere.com/en/photo/1247785
+- swim1.jpg — PxHere (CC0) https://pxhere.com/en/photo/625079
+- swim2.jpg — Needpix (CC0) https://www.needpix.com/photo/download/1180373/
+- whitehouse_night.jpg — NASA Goddard, Flickr (CC BY) https://www.flickr.com/photos/nasa_goddard/22228747400
+- concert_purple.jpg — PxHere (CC0) https://pxhere.com/en/photo/1559975
+- akiba1.jpg — freeimageslive (free) https://freeimageslive.co.uk/free_stock_image/akihabara-night-jpg
+- akiba2.jpg — IQRemix, Flickr (CC) https://www.flickr.com/photos/iqremix/17241409568
+- akiba3.jpg — Luke Zeme, Flickr (CC) https://www.flickr.com/photos/lukezemephotography/8286763878
