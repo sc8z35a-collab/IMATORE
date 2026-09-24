@@ -133,8 +133,8 @@ export const DISTRICTS = [
     tagline: '興行・秋アニメ・話題作',
     items: [
       { title: '映画ちいかわ 興収158億円突破', date: '9/21', heat: 88, body: '『人魚の島のひみつ』が2026年公開作No.1。動員1085万人超。' },
-      { title: 'ノーラン『オデュッセイア』', date: '9/11', heat: 84, body: 'マット・デイモン、トム・ホランド、アン・ハサウェイ。アクセスランキング首位。' },
-      { title: '踊る大捜査線 N.E.W.', date: '9/18', heat: 78, body: '青島俊作が主人公の物語としては約14年ぶりの新作。' },
+      { title: 'ノーラン『オデュッセイア』', date: '9/11', heat: 84, body: 'マット・デイモン、トム・ホランド、アン・ハサウェイ。映画.comアクセスランキング首位、週末動員は4位。全米では公開10週目も4位。' },
+      { title: '踊る大捜査線 N.E.W.', date: '9/18', heat: 80, body: '青島俊作が主人公の物語としては約14年ぶりの新作。初週末の動員ランキング2位スタート(1位はちいかわ9週連続)。3位『映画名探偵プリキュア!』、5位『八つ墓村』。' },
       { title: '実写『ルックバック』', date: '9/11', heat: 70, body: '藤本タツキ原作を是枝裕和監督が実写化。' },
       { title: '最終楽章 響け!ユーフォニアム 後編', date: '9/11', heat: 68, body: '京都アニメーションの人気シリーズ、ついに完結。' },
       { title: '『白鳥とコウモリ』', date: '9/4', heat: 66, body: '東野圭吾原作、松村北斗×今田美桜W主演。主題歌は大森元貴「灰色」。' },
@@ -156,7 +156,7 @@ export const DISTRICTS = [
     img: '/img/shibuya_night.jpg',
     tagline: 'チャート・エンタメ速報',
     items: [
-      { title: 'WEST. 9/30での解散を発表', img: '/img/concert_purple.jpg', date: '9/24', heat: 100, body: '8/30の藤井流星・小瀧望の脱退発表に続き、グループとしての活動終了を発表。急上昇ワード1位。' },
+      { title: 'WEST. 9/30での解散を発表', img: '/img/concert_purple.jpg', date: '9/24', heat: 100, body: 'STARTO ENTERTAINMENTが発表。8月の藤井流星・小瀧望の脱退表明から約1か月、残る5名と協議した結果「それぞれが目指す活動や方向性を踏まえ」9/30でグループ活動を終了。ファンと対面する公演は「現時点ではない」。今後は7人が個人活動へ。' },
       { title: 'Billboard JAPAN Hot100 首位 INI', img: '/img/shibuya2.jpg', date: '9/23', heat: 76, body: '2位EBiDAN、3位M!LK。DLソングはBE:FIRST「WATCH ME feat. BIA」が首位。' },
       { title: 'EBiDAN「Yes! 東京」累計148万枚', date: '9/9', heat: 70, body: '超特急・M!LKら9組が参加した15周年記念シングル。' },
       { title: '大森元貴「灰色」急上昇', date: '9月', heat: 66, body: '映画『白鳥とコウモリ』主題歌。ラジオ1位。' },
@@ -186,7 +186,7 @@ export const DISTRICTS = [
       { title: '阪神 優勝マジック6', img: '/img/tigers_fans.jpg', date: '9/24', heat: 86, body: '2位巨人が敗れ2ゲーム差。連覇へ前進。' },
       { title: 'ソフトバンク パ・リーグ3連覇', date: '9/17', heat: 70, body: '3年連続22度目の優勝。' },
       { title: 'マエケン 日米通算170勝', img: '/img/stadium_night.jpg', date: '9/24', heat: 77, body: '楽天・前田健太が日本復帰後初完封。松坂大輔・岩隈久志に並ぶ。' },
-      { title: 'ドジャース 5年連続地区V', img: '/img/soccer_matsumoto.jpg', date: '9/17', heat: 74, body: 'ワールドシリーズ3連覇へ。大谷翔平は9/23に負傷者リストから復帰、今季30本。' },
+      { title: 'ドジャース 5年連続地区V', img: '/img/soccer_matsumoto.jpg', date: '9/17', heat: 74, body: 'ワールドシリーズ3連覇へ。大谷翔平は9/23に負傷者リストから復帰(打率.277・30本)。24日のパドレス戦は山本由伸が14勝目ならず1-5で敗戦、松井裕樹が登板。' },
       { title: 'アジア大会 愛知・名古屋2026', img: '/img/swim2.jpg', date: '9/19〜', heat: 80, body: '32年ぶりの日本開催。競泳・フェンシングなどで金メダル量産。3x3バスケでも優勝候補の中国を撃破。' },
       { title: 'B.PREMIER 開幕 劇的ブザービーター', img: '/img/stadium_crowd.jpg', date: '9/24', heat: 60, body: '新生Bリーグ最上位「B.PREMIER」開幕節、群馬×A千葉はスタンリー・ジョンソンの3Pブザービーターで決着。' },
     ],
