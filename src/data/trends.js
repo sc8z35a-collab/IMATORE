@@ -24,6 +24,7 @@ export const TOP_NOW = [
   { t: 'チーバくん 県外活動を休止', c: 'news', heat: 66 },
 ];
 
+// NOTE: keep <= 13 items per district (kiosk rows must end before AVE_END-6)
 export const DISTRICTS = [
   {
     id: 'news',
@@ -90,9 +91,7 @@ export const DISTRICTS = [
       { title: 'RSA暗号を素因数分解より速く破る新手法', date: '9/24', heat: 58, body: '暗号研究者が報告。広く使われる公開鍵暗号の安全性に波紋。' },
       { title: 'NVIDIA、Hugging Faceを129億ドルで買収', date: '9月', heat: 66, body: 'AIモデル流通の要を傘下に。AMD・Intelへのオープン性は維持と表明。' },
       { title: 'ChatGPT・Claude・Grokが同時ダウン', date: '9/3', heat: 60, body: '約30分の間に3サービスが相次ぎ障害。クラウド集中リスクが話題に。' },
-      { title: 'Dyson カメラ付きAI歯ブラシ', date: '9/1', heat: 50, body: '「CameraJet」499ドル。毎秒28枚撮影で歯間を検出し水流を噴射。' },
       { title: 'Xbox×IKEA「YXSTABY」', date: '9/30発売', heat: 52, body: 'コントローラーのCADデータから生まれたスツールなど9点。Xbox 25周年。' },
-      { title: '加州 未成年SNSの無限スクロール禁止', date: '9/11', heat: 46, body: 'アルゴリズム推薦も制限。SNS依存対策として成立。' },
     ],
   },
   {
