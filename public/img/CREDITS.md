@@ -10,3 +10,9 @@
 - shibuya_night.jpg — PickPik (Royalty-free) https://www.pickpik.com/billboards-city-crowd-people-road-shibuya-97623
 - shibuya2.jpg — PickPik (Royalty-free) https://www.pickpik.com/shibuya-intersection-skyline-night-darkness-glitter-127083
 - tse.jpg — DocChewbacca, Flickr (CC) https://www.flickr.com/photos/st3f4n/2865510059
+- artemis.jpg — NASA (Public Domain) https://www.nasa.gov/blogs/missions/2022/11/21/artemis-i-flight-day-six-orion-performs-lunar-flyby-closest-outbound-approach/
+- artemis2_moon.jpg — NASA (Public Domain) https://www.nasa.gov/image-article/full-moon-over-artemis-ii/
+- stadium_night.jpg — PxHere (CC0) https://pxhere.com/en/photo/1566397
+- stadium_crowd.jpg — PxHere (CC0) https://pxhere.com/en/photo/726322
+- typhoon.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-shanshan-approaches-japan-92573/
+- typhoon2.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-mindulle-over-japan-88616/
