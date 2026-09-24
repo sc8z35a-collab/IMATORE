@@ -7,3 +7,10 @@
 - tgs2008.jpg — lazysupper, Flickr (CC) https://www.flickr.com/photos/digdug/2930389797/
 - niconico.jpg — PICRYL (Public Domain) https://picryl.com/media/the-niconico-festival-is-a-multicultural-entertainment-3fe4bb
 - HDRI/Textures — Poly Haven (CC0)
+- datacenter.jpg — PICRYL (Public Domain) https://picryl.com/media/supercomputer-mainframe-olympus-computer-communication-c835c0
+- serverroom.jpg — PICRYL (Public Domain) https://picryl.com/media/server-room-datacenter-5c73b3
+- supercomputer.jpg — rawpixel (CC0) https://www.rawpixel.com/image/3322310/free-photo-image-server-supercomputer-cc0
+- neon_osaka.jpg — PICRYL (Public Domain) https://picryl.com/media/neon-light-japan-osaka-7fae06
+- shibuya_night.jpg — PickPik (Royalty-free) https://www.pickpik.com/billboards-city-crowd-people-road-shibuya-97623
+- shibuya2.jpg — PickPik (Royalty-free) https://www.pickpik.com/shibuya-intersection-skyline-night-darkness-glitter-127083
+- tse.jpg — DocChewbacca, Flickr (CC) https://www.flickr.com/photos/st3f4n/2865510059
