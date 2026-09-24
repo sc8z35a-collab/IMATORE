@@ -18,7 +18,8 @@ if (!isMobile) document.body.classList.add('desktop');
 $('ld-date').textContent = AS_OF;
 $('asof').textContent = AS_OF;
 
-const setMsg = (m) => ($('ld-msg').textContent = m);
+const T0 = performance.now();
+const setMsg = (m) => { $('ld-msg').textContent = m; console.log(`[boot ${((performance.now() - T0) / 1000).toFixed(1)}s] ${m}`); };
 const setProg = (p) => ($('ld-fill').style.width = `${Math.round(p * 100)}%`);
 
 async function boot() {

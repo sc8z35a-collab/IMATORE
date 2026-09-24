@@ -106,11 +106,15 @@ export function buildGround(scene, M, refl) {
   const Y = 0.012;
   // ring: dashed centre, solid edges
   const ringLine = (r, w, dash, key) => {
+    if (!dash) {
+      const g = new THREE.RingGeometry(r - w / 2, r + w / 2, 160, 1);
+      g.rotateX(-Math.PI / 2); g.translate(0, Y, 0);
+      b.add(key, g);
+      return;
+    }
     const n = Math.round((2 * Math.PI * r) / dash);
-    for (let k = 0; k < n; k++) {
-      if (dash > 0 && k % 2) continue;
+    for (let k = 0; k < n; k += 2) {
       const t0 = (k / n) * Math.PI * 2, t1 = ((k + 1) / n) * Math.PI * 2;
-      // skip zebra zones
       const g = new THREE.RingGeometry(r - w / 2, r + w / 2, 3, 1, t0, t1 - t0);
       g.rotateX(-Math.PI / 2); g.translate(0, Y, 0);
       b.add(key, g);
