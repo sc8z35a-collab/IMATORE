@@ -22,7 +22,7 @@ export class Sky {
 
     // ---- HDR env map (reflections only, background stays procedural) ----
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    if (!QA) new HDRLoader(this.manager).load('/hdr/night.hdr', (hdr) => {
+    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load('/hdr/night.hdr', (hdr) => {
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       const env = pmrem.fromEquirectangular(hdr).texture;
       scene.environment = env;

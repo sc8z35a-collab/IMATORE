@@ -25,7 +25,7 @@ export class Kiosks {
     const screenGeo = new THREE.PlaneGeometry(1.5, 2.25);
     const topCap = new THREE.BoxGeometry(1.74, 0.05, 0.4);
     this.districts.forEach((d, i) => {
-      const edge = glow(d.color, 3.5);
+      const edge = glow(d.color, 1.8);
       d.items.forEach((item, k) => {
         const p = kioskPose(i, k);
         const g = new THREE.Group();
@@ -37,7 +37,7 @@ export class Kiosks {
         const bs = new THREE.Mesh(base, M.metalDark); bs.receiveShadow = true;
         g.add(bs);
         const tex = kioskTexture(item, d, k);
-        const sm = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.5, 1.5, 1.5) });
+        const sm = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.15, 1.15, 1.15) });
         const front = new THREE.Mesh(screenGeo, sm);
         front.position.set(0, 2.05, 0.185);
         g.add(front);
@@ -80,7 +80,7 @@ export class Kiosks {
       this._poolTex = new THREE.CanvasTexture(c);
     }
     return new THREE.MeshBasicMaterial({
-      map: this._poolTex, color: new THREE.Color(color).multiplyScalar(0.6), transparent: true,
+      map: this._poolTex, color: new THREE.Color(color).multiplyScalar(0.35), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4,
     });
   }

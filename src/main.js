@@ -8,10 +8,11 @@ import { City } from './world/city.js';
 import { ScreenSystem } from './world/screens.js';
 import { Kiosks } from './world/kiosks.js';
 import { Props } from './world/props.js';
+import { CityLife } from './world/life.js';
 import { Controls } from './controls.js';
 import { QA_OFF } from './util/qa.js';
 import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, kioskPose } from './world/layout.js';
-import { DISTRICTS, TOP_NOW, TICKER, AS_OF } from './data/trends.js';
+import { DISTRICTS, TOP_NOW, TICKER, AS_OF, X_TRENDS } from './data/trends.js';
 
 const $ = (id) => document.getElementById(id);
 const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.matchMedia('(pointer:coarse)').matches);
@@ -63,6 +64,10 @@ async function boot() {
 
   setMsg('ネオンと街灯を設置中…'); setProg(0.22); await tick();
   const props = new Props(scene, M, DISTRICTS).build(city);
+
+  setMsg('人と車を配置中…'); await tick();
+  const life = new CityLife(scene, DISTRICTS, X_TRENDS).build();
+  refl.hide.push(...life.holos);
 
   setMsg('トレンド端末を起動中…'); setProg(0.28); await tick();
   const kiosks = new Kiosks(scene, M, DISTRICTS, TOP_NOW).build();
@@ -382,6 +387,7 @@ async function boot() {
     if (!QA_OFF.screens) screens.update(t, dt, camera.position);
     kiosks.update(t, dt);
     props.update(t);
+    life.update(t, camera, scene);
     if (marker.visible) { markerT += dt; marker.scale.setScalar(1 + markerT * 3); marker.material.opacity = Math.max(0, 1 - markerT * 1.5); if (markerT > 0.7) marker.visible = false; }
 
     if (!QA_OFF.refl) refl.update(scene, camera);
@@ -403,7 +409,7 @@ async function boot() {
   requestAnimationFrame(loop);
   // QA helper: instant teleport (x,z,yaw,pitch)
   const tp = (x, z, yaw = 0, pitch = 0.1) => { controls.travel = null; controls.warpAmt = 0; controls.pos.set(x, 0, z); controls.yaw = yaw; controls.pitch = pitch; controls.update(0.016); };
-  window.__imatore = { tp, avePoint, engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
+  window.__imatore = { tp, avePoint, life, engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
 }
 
 // ---------------- procedural audio ----------------
