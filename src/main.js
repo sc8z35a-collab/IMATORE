@@ -397,7 +397,9 @@ async function boot() {
     }
   }
   requestAnimationFrame(loop);
-  window.__imatore = { engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
+  // QA helper: instant teleport (x,z,yaw,pitch)
+  const tp = (x, z, yaw = 0, pitch = 0.1) => { controls.travel = null; controls.warpAmt = 0; controls.pos.set(x, 0, z); controls.yaw = yaw; controls.pitch = pitch; controls.update(0.016); };
+  window.__imatore = { tp, avePoint, engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
 }
 
 // ---------------- procedural audio ----------------
