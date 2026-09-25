@@ -344,8 +344,11 @@ async function boot() {
   // ---------- loop ----------
   let t = 0, last = performance.now(), frame = 0;
   const clockEl = $('clk');
+  let lastDraw = 0;
   function loop(now) {
     requestAnimationFrame(loop);
+    if (QA_OFF.fps && now - lastDraw < 1000 / QA_OFF.fps) return;
+    lastDraw = now;
     let dt = Math.min(0.05, (now - last) / 1000); last = now;
     t += dt; frame++;
     if (intro < 0) {
@@ -372,7 +375,7 @@ async function boot() {
 
     sky.update(t, camera.position);
     refl.uniforms.uTime.value = t;
-    screens.update(t, dt, camera.position);
+    if (!QA_OFF.screens) screens.update(t, dt, camera.position);
     kiosks.update(t, dt);
     props.update(t);
     if (marker.visible) { markerT += dt; marker.scale.setScalar(1 + markerT * 3); marker.material.opacity = Math.max(0, 1 - markerT * 1.5); if (markerT > 0.7) marker.visible = false; }

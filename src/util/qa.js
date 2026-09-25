@@ -24,6 +24,6 @@ export function makeCanvas(w, h) {
 export const imgPath = (p) => (QA && typeof p === 'string' && p.startsWith('/img/') && !p.startsWith('/img/lo/') ? p.replace('/img/', '/img/lo/') : p);
 // fine-grained QA switches: ?qa=0.4&noshadow&norefl&nobloom
 const _q = new URLSearchParams(location.search);
-export const QA_OFF = { shadow: _q.has('noshadow'), refl: _q.has('norefl'), bloom: _q.has('nobloom'), compile: _q.has('nocompile') };
+export const QA_OFF = { shadow: _q.has('noshadow'), refl: _q.has('norefl'), bloom: _q.has('nobloom'), compile: _q.has('nocompile'), screens: _q.has('noscreens'), fps: parseFloat(_q.get('fps')) || 0 };
 // ?qa=0.4 -> render scale for the software rasteriser
 export const QA_DPR = QA ? parseFloat(new URLSearchParams(location.search).get('qa')) || 0.4 : 1;

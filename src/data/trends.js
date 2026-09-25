@@ -1,13 +1,17 @@
 // IMATORE trend dataset — researched 2026-09-24 (JST)
 // Each district is a zone in the 3D hub. `heat` 0-100 = relative buzz.
 
-export const AS_OF = '2026.09.24 THU 22:30 JST';
+export const AS_OF = '2026.09.25 FRI 17:00 JST';
 
 export const TOP_NOW = [
   { t: 'WEST. 9/30で解散を発表', c: 'ent', heat: 100 },
   { t: 'アジア大会 卓球男子団体 60年ぶり金 中国撃破', c: 'sports', heat: 98 },
   { t: '日本代表 3-1 ウルグアイ 松木玖生デビュー弾 塩貝健人が劇的V弾', c: 'sports', heat: 97 },
-  { t: '17歳 大橋信 200m平泳ぎ 世界新で2冠', c: 'sports', heat: 90 },
+  { t: '17歳 大橋信 200m平泳ぎ 世界新で2冠', c: 'sports', heat: 92 },
+  { t: '阪神・西勇輝 今季限りで引退', c: 'sports', heat: 84 },
+  { t: '今夜 中秋の名月', c: 'life', heat: 88 },
+  { t: '#やってMILK 最終回', c: 'ent', heat: 86 },
+  { t: '封神演義展 2027年春開催', c: 'anime', heat: 72 },
   { t: '米中首脳会談 ホワイトハウスで開催', c: 'world', heat: 93 },
   { t: '大相撲秋場所 大の里11勝1敗 単独トップ', c: 'sports', heat: 88 },
   { t: '阪神 優勝マジック6', c: 'sports', heat: 86 },
@@ -36,6 +40,7 @@ export const DISTRICTS = [
     img: '/img/typhoon.jpg',
     tagline: '今日の日本と世界',
     items: [
+      { title: '印旛沼 国交省が緊急復旧に着手', img: '/img/typhoon.jpg', date: '9/25', heat: 66, body: '台風25号で堤防が決壊した印旛沼で、国交省が25日から緊急復旧工事。防災庁は11月に発足予定。', src: 'ANN' },
       { title: '第2次高市改造内閣が発足', date: '9/17', heat: 80, body: '木原官房長官ら主要閣僚は留任。林総務相は退任、維新から初入閣。来年の総裁選を見据えた人事とも。' },
       { title: '日銀が再利上げ「局面が変わった」', date: '9/18', heat: 78, body: '植田総裁が会見。同日、お米の平均価格は5kg3000円を切り2年ぶりの安値に。' },
       { title: '台風25号 死者11人に', img: '/img/typhoon2.jpg', date: '9/24', heat: 85, body: '神奈川・横須賀で新たに1人の死亡を確認。千葉県内のJR在来線は復旧に3か月超かかる区間も。印旛沼の堤防決壊でウナギ5万匹が流出、チーバくんは県外活動を休止。' },
@@ -132,6 +137,7 @@ export const DISTRICTS = [
     img: '/img/moon_skyline.jpg',
     tagline: '興行・秋アニメ・話題作',
     items: [
+      { title: '「封神演義展」2027年春開催決定', date: '9/25', heat: 72, body: '30周年プロジェクト。藤崎竜の原画展に加え完全新作ゲーム『封神演義 逆命承天』も2027年発売。Xトレンド1位。', src: 'コミックナタリー / Impress' },
       { title: '映画ちいかわ 興収158億円突破', date: '9/21', heat: 88, body: '『人魚の島のひみつ』が2026年公開作No.1。動員1085万人超。' },
       { title: 'ノーラン『オデュッセイア』', date: '9/11', heat: 84, body: 'マット・デイモン、トム・ホランド、アン・ハサウェイ。映画.comアクセスランキング首位、週末動員は4位。全米では公開10週目も4位。' },
       { title: '踊る大捜査線 N.E.W.', date: '9/18', heat: 80, body: '青島俊作が主人公の物語としては約14年ぶりの新作。初週末の動員ランキング2位スタート(1位はちいかわ9週連続)。3位『映画名探偵プリキュア!』、5位『八つ墓村』。' },
@@ -156,6 +162,8 @@ export const DISTRICTS = [
     img: '/img/shibuya_night.jpg',
     tagline: 'チャート・エンタメ速報',
     items: [
+      { title: '『やってM!LK』最終回 #やってMILK トレンド1位', date: '9/24', heat: 86, body: 'M!LK初の地上波冠番組が2年の歴史に幕。編集なし15分フリートーク、ミルミルくんもトレンド入り。', src: 'TBS' },
+      { title: '映画『マッチング TRUE LOVE』公開', date: '9/25', heat: 74, body: '土屋太鳳・佐久間大介(Snow Man)出演、内田英治監督の続編ラブサバイバル・スリラー。#映画マッチング本日公開 がトレンド入り。', src: 'KADOKAWA' },
       { title: 'WEST. 9/30での解散を発表', img: '/img/concert_purple.jpg', date: '9/24', heat: 100, body: 'STARTO ENTERTAINMENTが発表。8月の藤井流星・小瀧望の脱退表明から約1か月、残る5名と協議した結果「それぞれが目指す活動や方向性を踏まえ」9/30でグループ活動を終了。ファンと対面する公演は「現時点ではない」。今後は7人が個人活動へ。' },
       { title: 'Billboard JAPAN Hot100 首位 INI', img: '/img/shibuya2.jpg', date: '9/23', heat: 76, body: '2位EBiDAN、3位M!LK。DLソングはBE:FIRST「WATCH ME feat. BIA」が首位。' },
       { title: 'EBiDAN「Yes! 東京」累計148万枚', date: '9/9', heat: 70, body: '超特急・M!LKら9組が参加した15周年記念シングル。' },
@@ -179,6 +187,9 @@ export const DISTRICTS = [
     img: '/img/tabletennis.png',
     tagline: 'アジア大会・野球・相撲・サッカー',
     items: [
+      { title: '17歳 大橋信 200m平泳ぎ 世界新で2冠', img: '/img/swim1.jpg', date: '9/24', heat: 92, body: '東京アクアティクスセンターで2分04秒83の世界新記録。100mに続く平泳ぎ2冠。アジア大会での世界新は北島康介氏以来。', src: '読売新聞 / olympics.com' },
+      { title: '卓球女子団体・バド女子団体 中国に敗れ銀', date: '9/24', heat: 80, body: '卓球女子は0-3で中国6連覇を許し2大会連続銀、男女アベック金ならず。バドミントン女子団体も0-3で銀、エース山口茜が涙。', src: 'Yahoo!ニュース / 産経' },
+      { title: '阪神・西勇輝が今季限りで引退', img: '/img/tigers_fans.jpg', date: '9/25', heat: 84, body: '通算127勝、2桁勝利7度の技巧派右腕(35)。「悔いはない」。阪神は優勝マジック6、25日から横浜でDeNA戦。', src: 'スポーツ報知 / スポニチ' },
       { title: '卓球男子団体 60年ぶり金', img: '/img/pingpong.jpg', date: '9/24', heat: 98, body: 'アジア大会決勝で日本が中国を3-2で撃破。最後は松島輝空が温瑞博を下す。張本智和も王楚欽に勝利。' },
       { title: 'サッカー日本代表 3-1 ウルグアイ', img: '/img/soccer_jp.jpg', date: '9/24', heat: 97, body: '第3次森保ジャパン初陣。前半11分、A代表デビューの松木玖生が左足ミドルで先制。アラウホに同点とされるも、後半ATに途中出場の21歳・塩貝健人が代表初ゴールの勝ち越し弾、上田綺世がダメ押し。ウルグアイはフォルラン新監督。' },
       { title: '17歳 大橋信 世界新で2冠', img: '/img/swim1.jpg', date: '9/24', heat: 90, body: 'アジア大会競泳 男子200m平泳ぎで2分4秒83の世界新記録。100m平泳ぎに続く金メダル。' },
@@ -201,6 +212,7 @@ export const DISTRICTS = [
     img: '/img/moon_ltokyo.jpg',
     tagline: '季節・グルメ・カルチャー',
     items: [
+      { title: '今夜は中秋の名月 見られるのは北日本中心', img: '/img/moon_skyline.jpg', date: '9/25', heat: 88, body: '満月は2日後の27日。北海道〜東北北部は好条件、九州〜東北南部は雲が多め。月見団子もトレンド入り。', src: 'tenki.jp / ウェザーニュース' },
       { title: '9/25 中秋の名月', img: '/img/moon_ltokyo.jpg', date: '9/25', heat: 82, body: '今年は満月2日前の月。明日は曇りの地域が多い予報で、晴れた今夜の南東の月を「一足早いお月見」として楽しむ投稿が急増。' },
       { title: 'ちいかわ「くりまんじゅうだらけくじ」', date: '9/24', heat: 66, body: 'X日本トレンド2位に。ナガノマーケットではワッフル長袖Tシャツも10/2から。' },
       { title: '「アイスボックス」血糖値検証がバズ', date: '9/24', heat: 52, body: '糖尿病内科医が食後血糖値を測定し「おすすめNo.1のアイス」と評価。1カップの炭水化物は3.7g。' },
