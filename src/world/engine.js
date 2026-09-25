@@ -4,7 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { QA } from '../util/qa.js';
+import { QA, QA_DPR, QA_OFF } from '../util/qa.js';
 
 // Final cinematic grade: lens distortion, chromatic aberration, vignette, grain, rain-on-lens glints.
 const FinalShader = {
@@ -61,11 +61,11 @@ export class Engine {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !QA_OFF.shadow;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = renderer;
     this.maxDpr = Math.min(window.devicePixelRatio || 1, 3);
-    this.dpr = QA ? 1 : Math.min(this.maxDpr, 2.25);
+    this.dpr = QA ? QA_DPR : Math.min(this.maxDpr, 2.25);
     renderer.setPixelRatio(this.dpr);
 
     this.scene = new THREE.Scene();
@@ -77,7 +77,7 @@ export class Engine {
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.82);
-    this.composer.addPass(this.bloom);
+    if (!QA_OFF.bloom) this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.final = new ShaderPass(FinalShader);
     this.composer.addPass(this.final);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeCanvas } from '../util/qa.js';
 
 // ---------- helpers ----------
 export function rng(seed = 1) {
@@ -12,11 +13,7 @@ export function rng(seed = 1) {
   };
 }
 
-function canvas(w, h) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  return [c, c.getContext('2d')];
-}
+const canvas = makeCanvas;
 
 export function toTex(c, { srgb = true, repeat = false, aniso = 8 } = {}) {
   const t = new THREE.CanvasTexture(c);

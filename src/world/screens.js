@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeCanvas, imgPath } from '../util/qa.js';
 import { wrapText, toTex } from './textures.js';
 
 const JP = '"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif';
@@ -65,9 +66,7 @@ export class Channel {
   constructor(kind, district, images, allTop) {
     this.kind = kind; this.d = district; this.images = images; this.top = allTop;
     const [W, H] = kind === 'land' ? [1280, 720] : kind === 'port' ? [720, 1280] : [2048, 128];
-    this.c = document.createElement('canvas');
-    this.c.width = W; this.c.height = H;
-    this.g = this.c.getContext('2d');
+    [this.c, this.g] = makeCanvas(W, H);
     this.tex = toTex(this.c, { aniso: 8 });
     this.tex.generateMipmaps = true;
     this.aspect = W / H;
@@ -249,7 +248,7 @@ export class ScreenSystem {
     const load = (url) => {
       if (!url) return null;
       if (cache.has(url)) return cache.get(url);
-      const im = new Image(); im.decoding = 'async'; im.src = url; cache.set(url, im); return im;
+      const im = new Image(); im.decoding = 'async'; im.src = imgPath(url); cache.set(url, im); return im;
     };
     this.districts.forEach((d) => {
       d.imgEls = [d.img, ...(d.gallery || [])].map(load).filter(Boolean);

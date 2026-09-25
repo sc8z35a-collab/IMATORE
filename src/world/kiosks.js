@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeCanvas } from '../util/qa.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { kioskTexture, bannerTexture, towerTexture, LedStrip } from './textures.js';
 import { kioskPose, addObstacle, avePoint, aveDir, PLAZA_R, ROAD_HALF, AVE_HALF, CURB, N_AVE, HUB_R } from './layout.js';
@@ -71,7 +72,7 @@ export class Kiosks {
 
   poolMat(color) {
     if (!this._poolTex) {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const [c] = makeCanvas(128, 128);
       const g = c.getContext('2d');
       const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
       grd.addColorStop(0, 'rgba(255,255,255,0.9)'); grd.addColorStop(0.4, 'rgba(255,255,255,0.25)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
@@ -193,7 +194,7 @@ export class Kiosks {
     });
     this.rings = rings;
     // crown: IMATORE logo ring + light beam
-    const logoC = document.createElement('canvas'); logoC.width = 2048; logoC.height = 256;
+    const [logoC] = makeCanvas(2048, 256);
     const lg = logoC.getContext('2d');
     lg.fillStyle = '#000'; lg.fillRect(0, 0, 2048, 256);
     lg.font = '900 170px Orbitron, sans-serif'; lg.textBaseline = 'middle'; lg.textAlign = 'center';

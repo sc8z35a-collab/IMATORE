@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { QA } from '../util/qa.js';
+import { QA, imgPath } from '../util/qa.js';
 
 // Night sky: procedural cloud dome lit by city glow, the (almost) harvest moon with NASA albedo,
 // stars, HDR environment for reflections, rain streaks, and the global light rig.
@@ -102,10 +102,10 @@ export class Sky {
 
   buildMoon() {
     const L = new THREE.TextureLoader(this.manager);
-    const color = L.load('/img/moon_color.jpg');
+    const color = L.load(imgPath('/img/moon_color.jpg'));
     color.colorSpace = THREE.SRGBColorSpace;
     color.anisotropy = 8;
-    const disp = L.load('/img/moon_disp.jpg');
+    const disp = L.load(imgPath('/img/moon_disp.jpg'));
     // waxing gibbous (2 days before full): lit from the side of the sun
     const sunDir = this.moonDir.clone().multiplyScalar(-1).add(new THREE.Vector3(0.9, 0.2, -0.35)).normalize();
     const mat = new THREE.ShaderMaterial({

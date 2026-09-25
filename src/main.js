@@ -9,6 +9,7 @@ import { ScreenSystem } from './world/screens.js';
 import { Kiosks } from './world/kiosks.js';
 import { Props } from './world/props.js';
 import { Controls } from './controls.js';
+import { QA_OFF } from './util/qa.js';
 import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, kioskPose } from './world/layout.js';
 import { DISTRICTS, TOP_NOW, TICKER, AS_OF } from './data/trends.js';
 
@@ -78,7 +79,7 @@ async function boot() {
   // compile shaders up-front to avoid hitches
   camera.position.set(0, 1.6, 18);
   await tick();
-  try { renderer.compile(scene, camera); } catch (e) { /* ignore */ }
+  if (!QA_OFF.compile) try { renderer.compile(scene, camera); } catch (e) { /* ignore */ }
   await assetsDone;
   setProg(1);
   setMsg(isMobile ? '準備完了 — タップして入場' : 'スマホ専用ハブです(PCでは簡易操作)');
@@ -376,7 +377,7 @@ async function boot() {
     props.update(t);
     if (marker.visible) { markerT += dt; marker.scale.setScalar(1 + markerT * 3); marker.material.opacity = Math.max(0, 1 - markerT * 1.5); if (markerT > 0.7) marker.visible = false; }
 
-    refl.update(scene, camera);
+    if (!QA_OFF.refl) refl.update(scene, camera);
     engine.render(t);
     engine.adapt(dt, t);
 
