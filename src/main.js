@@ -349,7 +349,7 @@ async function boot() {
     requestAnimationFrame(loop);
     if (QA_OFF.fps && now - lastDraw < 1000 / QA_OFF.fps) return;
     lastDraw = now;
-    let dt = Math.min(0.05, (now - last) / 1000); last = now;
+    let dt = Math.min(QA_OFF.fps ? 0.5 : 0.05, (now - last) / 1000); last = now;
     t += dt; frame++;
     if (intro < 0) {
       // attract mode behind loader: slow orbit high above the plaza

@@ -9,7 +9,7 @@ port = '--port' in sys.argv
 qa = next((a.split('=')[1] for a in sys.argv if a.startswith('--q=')), '0.35')
 flags = next((a.split('=',1)[1] for a in sys.argv if a.startswith('--flags=')), '')
 ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist',
-        '--renderer-process-limit=1', '--disable-extensions', '--js-flags=--max-old-space-size=420', '--disable-dev-shm-usage']
+        '--renderer-process-limit=1', '--in-process-gpu', '--disable-extensions', '--js-flags=--max-old-space-size=420', '--disable-dev-shm-usage']
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(args=ARGS)

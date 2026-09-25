@@ -69,6 +69,9 @@ export class GroundReflection {
     pm.elements[2] = clip.x; pm.elements[6] = clip.y; pm.elements[10] = clip.z + 1.0; pm.elements[14] = clip.w;
 
     const r = this.renderer;
+    // reflective surfaces sample this.rt -> they must not be drawn into it (feedback loop)
+    if (!this._self) { this._self = []; scene.traverse((o) => { if (o.isMesh && o.material?.userData?.reflSelf) this._self.push(o); }); }
+    for (const o of this._self) o.visible = false;
     for (const o of this.hide) o.visible = false;
     const prevRT = r.getRenderTarget();
     const prevShadow = r.shadowMap.autoUpdate;
@@ -79,12 +82,14 @@ export class GroundReflection {
     r.setRenderTarget(prevRT);
     r.shadowMap.autoUpdate = prevShadow;
     for (const o of this.hide) o.visible = true;
+    for (const o of this._self) o.visible = true;
   }
 
   // inject into a MeshStandardMaterial / MeshPhysicalMaterial
   // wet: base wetness 0..1 ; puddle: amount of puddles
   patch(material, { wet = 0.7, puddle = 0.5, tint = new THREE.Color(1, 1, 1) } = {}) {
     const U = this.uniforms;
+    material.userData.reflSelf = true;
     material.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U, {
         uWet: { value: wet }, uPuddle: { value: puddle }, uTint: { value: tint },
