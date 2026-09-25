@@ -29,3 +29,6 @@
 - akiba1.jpg — freeimageslive (free) https://freeimageslive.co.uk/free_stock_image/akihabara-night-jpg
 - akiba2.jpg — IQRemix, Flickr (CC) https://www.flickr.com/photos/iqremix/17241409568
 - akiba3.jpg — Luke Zeme, Flickr (CC) https://www.flickr.com/photos/lukezemephotography/8286763878
+- skate_bowl.jpg — PxHere (CC0) https://pxhere.com/en/photo/998119
+- skatepark_pd.jpg — Public Domain Pictures (PD) https://www.publicdomainpictures.net/en/view-image.php?image=437660&picture=skatepark
+- moon_aoto.jpg — "Super Harvest Moon at Aoto, Katsushika-ku" Yoshikazu TAKADA, Flickr (CC BY) https://www.flickr.com/photos/yoshikazut/21565469910

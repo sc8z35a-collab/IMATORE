@@ -184,7 +184,7 @@ export const DISTRICTS = [
   },
   {
     id: 'sports',
-    gallery: ['/img/sumo2.jpg','/img/pingpong.jpg','/img/soccer_jp.jpg','/img/swim1.jpg'],
+    gallery: ['/img/sumo2.jpg','/img/pingpong.jpg','/img/soccer_jp.jpg','/img/swim1.jpg','/img/skate_bowl.jpg'],
     name: 'SPORTS',
     jp: 'スポーツ',
     color: '#ffe14f',
@@ -197,7 +197,7 @@ export const DISTRICTS = [
       { title: '阪神・西勇輝が今季限りで引退', img: '/img/tigers_fans.jpg', date: '9/25', heat: 84, body: '通算127勝、2桁勝利7度の技巧派右腕(35)。「悔いはない」。阪神は優勝マジック6、25日から横浜でDeNA戦。', src: 'スポーツ報知 / スポニチ' },
       { title: '卓球男子団体 60年ぶり金', img: '/img/pingpong.jpg', date: '9/24', heat: 98, body: 'アジア大会決勝で日本が中国を3-2で撃破。最後は松島輝空が温瑞博を下す。張本智和も王楚欽に勝利。' },
       { title: 'サッカー日本代表 3-1 ウルグアイ', img: '/img/soccer_jp.jpg', date: '9/24', heat: 97, body: '第3次森保ジャパン初陣。前半11分、A代表デビューの松木玖生が左足ミドルで先制。アラウホに同点とされるも、後半ATに途中出場の21歳・塩貝健人が代表初ゴールの勝ち越し弾、上田綺世がダメ押し。ウルグアイはフォルラン新監督。' },
-      { title: '15歳 長谷川瑞穂 スケボー・パーク金', img: '/img/stadium_crowd.jpg', date: '9/25', heat: 90, body: '世界ランク1位が2本目に大技フロントフリップインディを決め94.03点。岡本碧優が銅、男子パークは永原依弦が金。日本の金メダルは計21個に。', src: '日経 / 47NEWS' },
+      { title: '15歳 長谷川瑞穂 スケボー・パーク金', img: '/img/skate_bowl.jpg', date: '9/25', heat: 90, body: '世界ランク1位が2本目に大技フロントフリップインディを決め94.03点。岡本碧優が銅、男子パークは永原依弦が金。日本の金メダルは計21個に。', src: '日経 / 47NEWS' },
       { title: '大の里 秋場所 優勝争い独走', img: '/img/sumo1.jpg', date: '9/25', heat: 88, body: '12日目に熱海富士を下し11勝1敗で後続に2差。13日目に勝ち、3敗勢がそろって敗れれば1年ぶり6度目の優勝。八角理事長も「完全復活」と評価。' },
       { title: '阪神 マジック6 近本が先頭打者弾', img: '/img/tigers_fans.jpg', date: '9/25', heat: 86, body: '4連勝で横浜に乗り込みDeNA戦。初回に近本光司が第5号の先頭打者本塁打。マジックは5日連続で減少中。' },
       { title: 'ソフトバンク パ・リーグ3連覇', date: '9/17', heat: 70, body: '3年連続22度目の優勝。' },
@@ -209,7 +209,7 @@ export const DISTRICTS = [
   },
   {
     id: 'life',
-    gallery: ['/img/artemis2_moon.jpg','/img/moon_skyline.jpg'],
+    gallery: ['/img/moon_aoto.jpg','/img/artemis2_moon.jpg','/img/moon_skyline.jpg'],
     name: 'LIFE / Z',
     jp: 'くらし・Z世代',
     color: '#4fffc3',
@@ -217,7 +217,7 @@ export const DISTRICTS = [
     img: '/img/moon_ltokyo.jpg',
     tagline: '季節・グルメ・カルチャー',
     items: [
-      { title: '今夜は中秋の名月 満月は27日', img: '/img/moon_skyline.jpg', date: '9/25', heat: 88, body: '名月と満月の日付が2日ずれるのは2017年以来。見た目はほぼ満月。北海道〜東北北部は好条件、関東以西は雲が多め。', src: '国立天文台 / tenki.jp' },
+      { title: '今夜は中秋の名月 満月は27日', img: '/img/moon_aoto.jpg', date: '9/25', heat: 88, body: '名月と満月の日付が2日ずれるのは2017年以来。見た目はほぼ満月。北海道〜東北北部は好条件、関東以西は雲が多め。', src: '国立天文台 / tenki.jp' },
       { title: 'マック「チキンフィレオ」ロス騒動', date: '9/25', heat: 91, body: 'メニュー変更で「いつも食べてるチキン系が消えた」との投稿が拡散し、Yahoo!リアルタイム検索1位に。「チキン系」も急上昇。', src: 'Yahoo!リアルタイム検索' },
       { title: 'ちいかわ「くりまんじゅうだらけくじ」', date: '9/24', heat: 66, body: 'X日本トレンド2位に。ナガノマーケットではワッフル長袖Tシャツも10/2から。' },
       { title: '「アイスボックス」血糖値検証がバズ', date: '9/24', heat: 52, body: '糖尿病内科医が食後血糖値を測定し「おすすめNo.1のアイス」と評価。1カップの炭水化物は3.7g。' },
