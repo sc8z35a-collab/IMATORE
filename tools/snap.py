@@ -26,7 +26,8 @@ async def main():
             await pg.wait_for_selector('#enter:not([disabled])', timeout=200000)
         except Exception as e:
             logs.append('enter never enabled: ' + str(e))
-        await pg.evaluate("document.getElementById('enter').click()")
+        # headless: fullscreen triggers a resize that crashes the SwiftShader GPU process
+        await pg.evaluate("Element.prototype.requestFullscreen = undefined; document.getElementById('enter').click()")
         await pg.wait_for_timeout(4500)
         if js:
             await pg.evaluate(js)
