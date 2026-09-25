@@ -102,7 +102,11 @@ async function boot() {
     controls.enabled = true;
     intro = 0;
     audio.start();
-    try { document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {}); } catch (e) {}
+    // Android Chrome: fullscreen first, then lock to landscape (lock requires fullscreen)
+    try {
+      const fs = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+      Promise.resolve(fs).then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+    } catch (e) {}
   };
 
   // ---------- intro fly-in ----------

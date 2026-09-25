@@ -24,7 +24,7 @@
       <div class="ld-bar"><i id="ld-fill"></i></div>
       <div class="ld-msg" id="ld-msg">世界を構築中…</div>
       <button id="enter" class="ld-btn" disabled>LOADING</button>
-      <div class="ld-hint">🎧 イヤホン推奨 ・ 横でも縦でもOK</div>
+      <div class="ld-hint">🎧 イヤホン推奨 ・ 📱 横向き全画面専用</div>
       <div class="ld-desk" id="ld-desk">このハブはスマートフォン専用に最適化されています。<br />スマホで開いてください。</div>
     </div>
   </div>
@@ -58,6 +58,13 @@
   <div id="detail" class="sheet hidden">
     <button class="x" data-close="detail">×</button>
     <div id="detail-body"></div>
+  </div>
+
+  <!-- landscape-only guard -->
+  <div id="rotate">
+    <div class="rot-phone"><i></i></div>
+    <b>スマホを横向きにしてください</b>
+    <small>ROTATE TO LANDSCAPE ・ 横画面・全画面専用ハブ</small>
   </div>
 
   <script type="module" src="/src/main.js"></script>
