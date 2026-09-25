@@ -15,7 +15,7 @@ async def main():
         logs = []
         pg.on('console', lambda m: logs.append(f'[{m.type}] {m.text}'))
         pg.on('pageerror', lambda e: logs.append(f'[pageerror] {e}'))
-        await pg.goto('http://localhost:5173/', wait_until='load')
+        await pg.goto('http://localhost:5173/?qa=1', wait_until='load')
         try:
             await pg.wait_for_selector('#enter:not([disabled])', timeout=180000)
         except Exception as e:

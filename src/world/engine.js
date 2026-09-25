@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { QA } from '../util/qa.js';
 
 // Final cinematic grade: lens distortion, chromatic aberration, vignette, grain, rain-on-lens glints.
 const FinalShader = {
@@ -64,14 +65,14 @@ export class Engine {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = renderer;
     this.maxDpr = Math.min(window.devicePixelRatio || 1, 3);
-    this.dpr = Math.min(this.maxDpr, 2.25);
+    this.dpr = QA ? 1 : Math.min(this.maxDpr, 2.25);
     renderer.setPixelRatio(this.dpr);
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(72, 1, 0.05, 1600);
     this.camera.rotation.order = 'YXZ';
 
-    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : 4 });
     this.composer = new EffectComposer(renderer, rt);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
@@ -107,6 +108,7 @@ export class Engine {
 
   // dynamic resolution to keep motion fluid
   adapt(dt, now) {
+    if (QA) return;
     this.frameTimes.push(dt);
     if (this.frameTimes.length > 90) this.frameTimes.shift();
     if (now - this.lastQualityCheck < 2.5 || this.frameTimes.length < 60) return;

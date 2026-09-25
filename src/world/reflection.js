@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QA } from '../util/qa.js';
 
 // Planar reflection for the ground plane (y = 0), shared by every ground material.
 // Materials get it injected via onBeforeCompile -> wet asphalt with puddles & rain ripples.
@@ -6,7 +7,7 @@ export class GroundReflection {
   constructor(renderer, scale = 0.5) {
     this.renderer = renderer;
     this.scale = scale;
-    this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 2 });
+    this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : 2 });
     this.cam = new THREE.PerspectiveCamera();
     this.texMat = new THREE.Matrix4();
     this.hide = [];            // objects hidden during reflection pass

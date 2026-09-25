@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { texPath } from '../util/qa.js';
 import { windowTexture, facadeTexture, facadeRoughTexture } from './textures.js';
 
 // Shared PBR / procedural materials. Loaded once, reused everywhere.
@@ -10,7 +11,7 @@ export class Materials {
   }
 
   tex(url, { srgb = true, repeat = 1 } = {}) {
-    const t = this.loader.load(url);
+    const t = this.loader.load(texPath(url));
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = this.aniso;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
