@@ -9,7 +9,7 @@ async def main():
         logs=[]
         pg.on('console', lambda m: logs.append(f'[{m.type}] {m.text[:600]}'))
         pg.on('pageerror', lambda e: logs.append(f'[pageerror] {e}'))
-        await pg.goto('http://localhost:5173/?qa=1', wait_until='load')
+        await pg.goto('http://localhost:4173/?qa=1', wait_until='load')
         for i in range(90):
             await asyncio.sleep(2)
             if any('context lost' in l.lower() or 'VALIDATE' in l or 'pageerror' in l for l in logs): break
