@@ -75,7 +75,8 @@ export class GroundReflection {
     for (const o of this.hide) o.visible = false;
     const prevRT = r.getRenderTarget();
     const prevShadow = r.shadowMap.autoUpdate;
-    r.shadowMap.autoUpdate = false;
+    // first frame: let the shadow map be generated here, otherwise shadow samplers bind a non-depth dummy texture
+    if (this._n = (this._n || 0) + 1, this._n > 2) r.shadowMap.autoUpdate = false;
     r.setRenderTarget(this.rt);
     r.clear();
     r.render(scene, cam);
