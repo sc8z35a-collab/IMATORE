@@ -46,48 +46,79 @@ const OR = 'Orbitron,"Noto Sans JP",sans-serif';
 // ---------- building windows (emissive) ----------
 // one tile = 8 columns x 8 floors
 export function windowTexture(seed, style = 'office') {
+  // Realistic night windows. Key ideas vs. a random checkerboard:
+  //  * office floors light up in contiguous runs (open-plan floors), not isolated cells
+  //  * interiors have a ceiling-light gradient (bright top, darker desk zone) + fixture rows
+  //  * mullions split each bay, blinds/curtains partially cover, silhouettes of desks/plants
+  //  * wide brightness range (most lit windows are dim; a few are hot) -> no uniform glare
   const R = rng(seed);
   const S = 1024, N = 8, cell = S / N;
   const [c, g] = canvas(S, S);
-  g.fillStyle = '#000';
-  g.fillRect(0, 0, S, S);
-  const warm = ['#ffd9a0', '#ffc27a', '#fff0d0', '#ffe7b0'];
-  const cool = ['#cfe8ff', '#a8d4ff', '#e8f4ff', '#bfe3ff'];
-  const neon = ['#ff4fd8', '#27e0ff', '#7cff4f', '#ffe14f'];
+  g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+  const warm = ['#ffd6a0', '#ffc88a', '#fff0d6', '#ffe2b4', '#ffbf80'];
+  const cool = ['#dcefff', '#bfe0ff', '#eef6ff', '#cde8ff'];
+  const curtains = ['#e8c89a', '#d9a878', '#f0e0c0', '#c9d8e8', '#e0b0a0', '#b8c8a0'];
+  const glass = style === 'glass', resi = style === 'resi';
+  const m = glass ? 3 : 12, sill = glass ? 0 : 10;
   for (let y = 0; y < N; y++) {
-    const floorLit = R() < 0.85;
+    // per-floor state: office floors are either mostly on or mostly off
+    const floorOn = R() < (resi ? 0.8 : 0.7);
+    const floorTone = R() < (glass ? 0.85 : resi ? 0.25 : 0.55) ? cool : warm;
+    const floorLevel = 0.35 + R() * 0.55;
+    let run = 0, runOn = false;
     for (let x = 0; x < N; x++) {
-      const lit = floorLit && R() < (style === 'office' ? 0.62 : 0.45);
-      const px = x * cell, py = y * cell;
-      const m = style === 'glass' ? 4 : 14;
-      if (lit) {
-        const pal = style === 'glass' ? cool : R() < 0.7 ? warm : cool;
-        const col = R() < 0.03 ? neon[(R() * 4) | 0] : pal[(R() * pal.length) | 0];
-        const grd = g.createLinearGradient(px, py, px, py + cell);
-        grd.addColorStop(0, col);
-        grd.addColorStop(1, shade(col, 0.55 + R() * 0.3));
-        g.globalAlpha = 0.55 + R() * 0.45;
-        g.fillStyle = grd;
-        g.fillRect(px + m, py + m, cell - m * 2, cell - m * 2 - (style === 'glass' ? 0 : 10));
-        // blinds / silhouettes
-        if (R() < 0.35) {
-          g.globalAlpha = 0.5;
-          g.fillStyle = '#000';
-          const bl = (R() * 0.6) * (cell - m * 2);
-          g.fillRect(px + m, py + m, cell - m * 2, bl);
-          for (let k = 0; k < 6; k++) g.fillRect(px + m, py + m + bl + k * 8, cell - m * 2, 2);
-        }
-        if (R() < 0.15) {
-          g.globalAlpha = 0.6; g.fillStyle = '#000';
-          const w = 10 + R() * 14, hx = px + m + R() * (cell - m * 2 - w);
-          g.beginPath(); g.arc(hx + w / 2, py + cell * 0.55, w * 0.45, 0, 7); g.fill();
-          g.fillRect(hx, py + cell * 0.62, w, cell * 0.3);
+      if (run <= 0) { run = 1 + ((R() * (resi ? 2 : 5)) | 0); runOn = floorOn ? R() < (resi ? 0.5 : 0.78) : R() < 0.12; }
+      run--;
+      const px = x * cell + m, py = y * cell + m, w = cell - m * 2, h = cell - m * 2 - sill;
+      if (runOn) {
+        const col = floorTone[(R() * floorTone.length) | 0];
+        const lvl = Math.min(1, floorLevel * (0.75 + R() * 0.5));
+        g.globalAlpha = lvl;
+        // interior gradient: ceiling fixtures bright, falls off to desk zone
+        const grd = g.createLinearGradient(0, py, 0, py + h);
+        grd.addColorStop(0, col); grd.addColorStop(0.35, shade(col, 0.85)); grd.addColorStop(1, shade(col, 0.4));
+        g.fillStyle = grd; g.fillRect(px, py, w, h);
+        if (!resi) {
+          // fixture rows (perspective: two strips near the top)
+          g.globalAlpha = lvl * 0.9; g.fillStyle = '#ffffff';
+          g.fillRect(px + w * 0.1, py + h * 0.06, w * 0.8, 3);
+          g.globalAlpha = lvl * 0.55; g.fillRect(px + w * 0.2, py + h * 0.17, w * 0.6, 2);
+          // desk / partition silhouettes
+          g.globalAlpha = 0.7; g.fillStyle = '#05060a';
+          g.fillRect(px, py + h * 0.72, w, h * 0.28);
+          for (let k = 0; k < 3; k++) if (R() < 0.5) g.fillRect(px + R() * w * 0.8, py + h * (0.5 + R() * 0.15), 6 + R() * 16, h * 0.4);
+          if (R() < 0.2) { // person
+            const hx = px + R() * (w - 18);
+            g.beginPath(); g.arc(hx + 9, py + h * 0.5, 7, 0, 7); g.fill(); g.fillRect(hx + 2, py + h * 0.56, 14, h * 0.4);
+          }
+          // blinds
+          if (R() < 0.3) {
+            g.globalAlpha = 0.55; g.fillStyle = '#0a0a0c';
+            const bl = R() * 0.55 * h; g.fillRect(px, py, w, bl);
+            g.globalAlpha = 0.3; for (let k = 0; k < bl; k += 6) g.fillRect(px, py + k, w, 2);
+          }
+        } else {
+          // residential: curtains with coloured fabric, lit through
+          const cc = curtains[(R() * curtains.length) | 0];
+          const open = R();
+          g.globalAlpha = lvl * 0.9; g.fillStyle = shade(cc, 0.7);
+          const cw = w * (0.15 + (1 - open) * 0.35);
+          g.fillRect(px, py, cw, h); g.fillRect(px + w - cw, py, cw, h);
+          g.globalAlpha = 0.25; g.fillStyle = '#000';
+          for (let k = 0; k < cw; k += 7) { g.fillRect(px + k, py, 2, h); g.fillRect(px + w - k - 2, py, 2, h); }
+          if (R() < 0.12) { g.globalAlpha = 0.6; g.fillStyle = '#5a8cff'; g.fillRect(px + w * 0.4, py + h * 0.55, w * 0.2, h * 0.2); } // TV glow
+          if (R() < 0.25) { g.globalAlpha = 0.75; g.fillStyle = '#040405'; g.fillRect(px, py + h * 0.82, w, h * 0.18); } // balcony rail
         }
       } else {
-        g.globalAlpha = 1;
-        g.fillStyle = R() < 0.3 ? '#0a0d14' : '#030406';
-        g.fillRect(px + m, py + m, cell - m * 2, cell - m * 2 - (style === 'glass' ? 0 : 10));
+        // dark window: faint interior / reflected city glow (not pure black)
+        g.globalAlpha = 1; g.fillStyle = R() < 0.25 ? '#0b0e16' : '#050609';
+        g.fillRect(px, py, w, h);
+        if (R() < 0.08) { g.globalAlpha = 0.18; g.fillStyle = '#ff9a5a'; g.fillRect(px + w * 0.6, py + h * 0.2, 8, 8); } // standby/exit light
       }
+      // mullions
+      g.globalAlpha = 0.9; g.fillStyle = '#020203';
+      g.fillRect(px + w / 2 - 1.5, py, 3, h);
+      if (glass) g.fillRect(px, py + h * 0.5, w, 2);
       g.globalAlpha = 1;
     }
   }
