@@ -76,7 +76,10 @@ export class Engine {
     this.composer = new EffectComposer(renderer, rt);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.42, 0.9);
+    // Bloom runs on the linear HDR buffer (before ACES in OutputPass): windows/signs sit around 1-2,
+    // so the threshold must be well above that or the whole frame turns milky. Only lamps, LED trims,
+    // headlights and the tower (>2.2) should bloom, with a tight radius.
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.22, 2.2);
     if (!QA_OFF.bloom) this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.final = new ShaderPass(FinalShader);
