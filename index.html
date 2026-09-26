@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#05060c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>IMATORE 今トレ — 3D Trend Hub 2026.09.24</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="./assets/index--8OPao3m.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BkZ8QoAy.css">
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- Loading / Gate -->
+  <div id="loader">
+    <div class="ld-inner">
+      <div class="ld-logo"><span class="jp">今トレ</span><span class="en">IMATORE</span></div>
+      <div class="ld-sub">3D TREND HUB — <span id="ld-date"></span></div>
+      <div class="ld-bar"><i id="ld-fill"></i></div>
+      <div class="ld-msg" id="ld-msg">世界を構築中…</div>
+      <button id="enter" class="ld-btn" disabled>LOADING</button>
+      <div class="ld-hint">🎧 イヤホン推奨 ・ 📱 横向き全画面専用</div>
+      <div class="ld-desk" id="ld-desk">このハブはスマートフォン専用に最適化されています。<br />スマホで開いてください。</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="brand"><b>今トレ</b><small>IMATORE</small></div>
+      <div class="clock"><span id="clk"></span><small id="zone">PLAZA</small></div>
+      <canvas id="minimap" width="240" height="240"></canvas>
+    </div>
+    <div id="crosshair"></div>
+    <div id="prompt" class="hidden"><span id="prompt-t"></span><small>タップで開く</small></div>
+    <div id="ticker"><div id="ticker-in"></div></div>
+    <div class="hud-btns">
+      <button id="btn-guide" title="ガイド">☰</button>
+      <button id="btn-run" title="走る">RUN</button>
+      <button id="btn-gyro" title="ジャイロ">GYRO</button>
+    </div>
+    <div id="joy"><div id="joy-knob"></div></div>
+  </div>
+
+  <!-- Guide / fast-travel -->
+  <div id="guide" class="sheet hidden">
+    <div class="sheet-h"><b>TREND GUIDE</b><span>タップでその通りへワープ</span><button class="x" data-close="guide">×</button></div>
+    <div id="guide-list"></div>
+    <div class="credits">画像: NASA / Poly Haven(CC0) / Flickr・PxHere・PickPik (CC) / AI生成 ・ 調査時点 <span id="asof"></span></div>
+  </div>
+
+  <!-- Detail sheet -->
+  <div id="detail" class="sheet hidden">
+    <button class="x" data-close="detail">×</button>
+    <div id="detail-body"></div>
+  </div>
+
+  <!-- landscape-only guard -->
+  <div id="rotate">
+    <div class="rot-phone"><i></i></div>
+    <b>スマホを横向きにしてください</b>
+    <small>ROTATE TO LANDSCAPE ・ 横画面・全画面専用ハブ</small>
+  </div>
+
+</body>
+</html>
