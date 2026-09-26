@@ -28,8 +28,13 @@ export class Kiosks {
     for (const sx of [-0.84, 0.84]) for (const sz of [-0.182, 0.182]) { const e = new THREE.BoxGeometry(0.022, 3.0, 0.022); e.translate(sx, 1.93, sz); trimParts.push(e); }
     for (const sz of [-0.182, 0.182]) { const c = new THREE.BoxGeometry(1.66, 0.022, 0.022); c.translate(0, 3.43, sz); trimParts.push(c); }
     const trimGeo = mergeGeometries(trimParts, false);
+    // shared across all 100+ kiosks (was one new geometry/material per kiosk)
+    const poolGeo = new THREE.PlaneGeometry(3.2, 3.2);
+    const hitGeo = new THREE.BoxGeometry(1.9, 3.6, 0.8);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     this.districts.forEach((d, i) => {
       const edge = glow(d.color, 2.6);
+      const poolM = this.poolMat(d.color);
       d.items.forEach((item, k) => {
         const p = kioskPose(i, k);
         const g = new THREE.Group();
@@ -52,11 +57,11 @@ export class Kiosks {
         // thin LED trims on the corners + top (one merged mesh per kiosk)
         g.add(new THREE.Mesh(trimGeo, edge));
         // floor glow decal
-        const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), this.poolMat(d.color));
+        const pool = new THREE.Mesh(poolGeo, poolM);
         pool.rotation.x = -Math.PI / 2; pool.position.y = 0.015;
         g.add(pool);
         // hit box
-        const hit = new THREE.Mesh(new THREE.BoxGeometry(1.9, 3.6, 0.8), new THREE.MeshBasicMaterial({ visible: false }));
+        const hit = new THREE.Mesh(hitGeo, hitMat);
         hit.position.y = 1.9;
         hit.userData = { kind: 'item', district: i, item: k };
         g.add(hit);
@@ -79,6 +84,7 @@ export class Kiosks {
       grd.addColorStop(0, 'rgba(255,255,255,0.9)'); grd.addColorStop(0.4, 'rgba(255,255,255,0.25)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
       this._poolTex = new THREE.CanvasTexture(c);
+      this._poolTex.colorSpace = THREE.SRGBColorSpace;
     }
     return new THREE.MeshBasicMaterial({
       map: this._poolTex, color: new THREE.Color(color).multiplyScalar(0.35), transparent: true,
@@ -113,7 +119,7 @@ export class Kiosks {
     beam.position.y = H + 1.2; beam.castShadow = true;
     g.add(beam);
     const hl = [...d.items].sort((a, b) => b.heat - a.heat)[0];
-    const tex = bannerTexture(d, hl.title);
+    const tex = bannerTexture(d, hl ? hl.title : d.tagline);
     const bm = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.6, 1.6, 1.6) });
     const face = new THREE.Mesh(new THREE.PlaneGeometry(span + 0.8, 2.6), bm);
     face.position.set(0, H + 1.2, 0.41); g.add(face);
@@ -253,7 +259,7 @@ export class Kiosks {
 
   update(t, dt) {
     for (const f of this.animated) f(t);
-    if (this.rings) this.rings.forEach((r) => { r.tex.offset.x = (r.tex.offset.x + r.sp * dt) % 1; });
+    if (this.rings) this.rings.forEach((r) => { r.tex.offset.x = ((r.tex.offset.x + r.sp * dt) % 1 + 1) % 1; });
     if (this.logo) this.logo.rotation.y = t * 0.25;
     if (this.orbit) this.orbit.rotation.y = t * 0.05;
     if (this.beamMat) this.beamMat.uniforms.uTime.value = t;

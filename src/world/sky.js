@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { QA, imgPath } from '../util/qa.js';
+import { QA, imgPath, asset } from '../util/qa.js';
 
 // Night sky: procedural cloud dome lit by city glow, the (almost) harvest moon with NASA albedo,
 // stars, HDR environment for reflections, rain streaks, and the global light rig.
@@ -21,8 +21,8 @@ export class Sky {
     scene.background = new THREE.Color(0x05070d);
 
     // ---- HDR env map (reflections only, background stays procedural) ----
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load('/hdr/night.hdr', (hdr) => {
+    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load(asset('/hdr/night.hdr'), (hdr) => {
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       const env = pmrem.fromEquirectangular(hdr).texture;
       scene.environment = env;
@@ -30,7 +30,7 @@ export class Sky {
       scene.environmentRotation.set(0, 1.2, 0);
       hdr.dispose();
       pmrem.dispose();
-    });
+    }, undefined, (err) => console.warn('HDR env map failed to load (reflections fall back to lights only)', err));
 
     this.buildDome();
     this.buildMoon();
@@ -227,6 +227,7 @@ export class Sky {
     key.shadow.mapSize.set(QA ? 1024 : 4096, QA ? 1024 : 4096);
     const s = 70;
     Object.assign(key.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 10, far: 400 });
+    key.shadow.camera.updateProjectionMatrix();
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.04;
     key.shadow.radius = 3;

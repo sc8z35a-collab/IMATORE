@@ -226,11 +226,15 @@ export class Props {
           addObstacle(p.x, p.z, 0.45);
         }
         // bollards
+        const lampOff = side > 0 ? 8 : 0;
         for (let a = PLAZA_R + 4; a < AVE_END - 4; a += 4) {
-          if ((a | 0) % 16 < 3) continue;
+          // leave a gap around each lamp post (lamps at PLAZA_R+8+lampOff+16k); old test never matched them
+          const rel = (((a - (PLAZA_R + 8 + lampOff)) % 16) + 16) % 16;
+          if (rel < 1.5 || rel > 14.5) continue;
           const p = avePoint(i, a, side * (ROAD_HALF + 0.3));
           bollards.add(M4(p.x, CURB, p.z));
         }
+        this.vmSpots = this.vmSpots || [];
         // vending machines against building fronts
         for (let a = TIP_END + 6 + R() * 10; a < AVE_END - 6; a += 18 + R() * 22) {
           const nx = -dir.z, nz = dir.x;
@@ -242,7 +246,6 @@ export class Props {
             (R() < 0.35 ? vmRed : vending).add(M4(q.x, CURB, q.z, ry));
             addObstacle(q.x, q.z, 0.6);
           }
-          this.vmSpots = this.vmSpots || [];
           this.vmSpots.push({ x: p.x - side * nx * 0.6, z: p.z - side * nz * 0.6 });
         }
         // benches + bins
@@ -337,7 +340,7 @@ export class Props {
     const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
     grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.18, 'rgba(255,255,255,0.62)'); grd.addColorStop(0.45, 'rgba(255,255,255,0.2)'); grd.addColorStop(0.75, 'rgba(255,255,255,0.05)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
-    const tex = new THREE.CanvasTexture(c);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, fog: true });
     const all = [];
@@ -345,11 +348,14 @@ export class Props {
     const pal = [0xff2a6d, 0x05d9e8, 0xffe14f, 0x7cff4f, 0xff9f1c, 0xb36bff, 0xffffff, 0xff4fd8];
     for (const s of city.spill) all.push({ x: s.x, z: s.z, s: s.size * 0.85, c: new THREE.Color(pal[s.color % pal.length]).multiplyScalar(0.22) });
     for (const v of this.vmSpots || []) all.push({ x: v.x, z: v.z, s: 3.6, c: new THREE.Color(0xdfe8ff).multiplyScalar(0.3) });
+    if (!all.length) return;
     const im = new THREE.InstancedMesh(geo, mat, all.length);
     all.forEach((p, k) => {
       im.setMatrixAt(k, new THREE.Matrix4().compose(new THREE.Vector3(p.x, CURB + 0.02, p.z), new THREE.Quaternion(), new THREE.Vector3(p.s, 1, p.s)));
       im.setColorAt(k, p.c);
     });
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.computeBoundingSphere();
     im.renderOrder = 2;
     this.group.add(im);
     this.pools = im;

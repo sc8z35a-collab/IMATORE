@@ -10,11 +10,14 @@ import { Kiosks } from './world/kiosks.js';
 import { Props } from './world/props.js';
 import { CityLife } from './world/life.js';
 import { Controls } from './controls.js';
-import { QA_OFF } from './util/qa.js';
-import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, kioskPose } from './world/layout.js';
+import { QA_OFF, asset } from './util/qa.js';
+import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, groundHeight } from './world/layout.js';
 import { DISTRICTS, TOP_NOW, TICKER, AS_OF, X_TRENDS } from './data/trends.js';
 
 const $ = (id) => document.getElementById(id);
+// all trend text is injected via innerHTML -> escape it (titles may contain <, &, quotes)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const cssUrl = (u) => `url(&quot;${esc(asset(u)).replace(/[()]/g, (c) => '%' + c.charCodeAt(0).toString(16))}&quot;)`;
 const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.matchMedia('(pointer:coarse)').matches);
 if (!isMobile) document.body.classList.add('desktop');
 $('ld-date').textContent = AS_OF;
@@ -51,7 +54,7 @@ async function boot() {
   setMsg('夜空と月を生成中…'); setProg(0.05); await tick();
   const refl = new GroundReflection(renderer, 0.5);
   engine.resizeHooks = [(w, h, dpr) => refl.setSize(w, h, Math.min(dpr, 1.5))];
-  engine.onResize();
+  engine.onResize(true);
   const sky = new Sky(scene, renderer, manager); sky.build();
 
   setMsg('街路を敷設中…'); setProg(0.1); await tick();
@@ -90,7 +93,7 @@ async function boot() {
   setMsg(isMobile ? '準備完了 — タップして入場' : 'スマホ専用ハブです(PCでは簡易操作)');
 
   // ---------- HUD ----------
-  $('ticker-in').innerHTML = [...TICKER, ...TICKER].map((t) => `<span>${t}</span>`).join('');
+  $('ticker-in').innerHTML = [...TICKER, ...TICKER].map((t) => `<span>${esc(t)}</span>`).join('');
   buildGuide();
 
   const controls = new Controls(camera, $('gl'), $('hud'));
@@ -100,7 +103,10 @@ async function boot() {
 
   const enter = $('enter');
   enter.disabled = false; enter.textContent = 'ENTER';
+  let entered = false;
   enter.onclick = () => {
+    if (entered) return; // double tap would start a second AudioContext / intro
+    entered = true;
     $('loader').classList.add('fade');
     $('hud').classList.remove('hidden');
     setTimeout(() => $('loader').remove(), 1000);
@@ -117,46 +123,49 @@ async function boot() {
   // ---------- intro fly-in ----------
   let intro = -1; // -1 = pre-enter orbit
   const introFrom = new THREE.Vector3(), introTo = new THREE.Vector3();
+  const introQ = new THREE.Quaternion(), introQ0 = new THREE.Quaternion(), introM = new THREE.Matrix4();
+  const introLook = new THREE.Vector3(0, 16, 0), UP = new THREE.Vector3(0, 1, 0);
 
   // ---------- picking ----------
   const ray = new THREE.Raycaster();
   ray.far = 60;
   const v2 = new THREE.Vector2();
   const pickables = [...kiosks.pickables];
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), gp = new THREE.Vector3();
   controls.onTap = (x, y) => {
-    if (!controls.enabled || sheetOpen()) return;
+    if (!controls.enabled) return;
+    // tapping the world while a sheet is open just closes the sheet
+    if (sheetOpen()) { closeSheets(); return; }
     v2.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
     ray.setFromCamera(v2, camera);
+    ray.far = 60;
     const hit = ray.intersectObjects(pickables, false)[0];
     if (hit) { openHit(hit.object.userData, hit.distance); return; }
-    // screens
+    // screens (far: the avenue-end screens are ~180 m away; ray.far=60 made them untappable)
+    ray.far = 200;
     const sh = ray.intersectObjects(screens.meshes, false)[0];
-    if (sh && sh.distance < 140) { openDistrict(sh.object.userData.district); return; }
+    ray.far = 60;
+    if (sh) { openDistrict(sh.object.userData.district); return; }
     // tap on ground: walk there
-    const gp = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
-    if (gp && gp.distanceTo(camera.position) < 50) {
+    if (ray.ray.intersectPlane(groundPlane, gp) && gp.distanceTo(camera.position) < 50) {
       controls.travelTo(gp.x, gp.z, null, { speed: 7 });
       tapMarker(gp);
     }
   };
   function openHit(u, dist) {
     if (u.kind === 'item') {
-      if (dist > 9) {
-        // walk up to it first, then open
-        const it = DISTRICTS[u.district].items[u.item];
-        approachItem(u.district, u.item, () => openItem(u.district, u.item));
-      } else openItem(u.district, u.item);
+      // walk up to it first, then open
+      if (dist > 9) approachItem(u.district, u.item, () => openItem(u.district, u.item));
+      else openItem(u.district, u.item);
     } else if (u.kind === 'district') openDistrict(u.district);
     else if (u.kind === 'top') openTop();
   }
   function approachItem(di, ki, then) {
-    const it = DISTRICTS[di].items[ki];
-    const p = it._pos;
-    const fx = -Math.sin(p.rotY + Math.PI), fz = -Math.cos(p.rotY + Math.PI);
+    const p = DISTRICTS[di].items[ki]._pos;
     // stand 3.2m in front of the panel face
     const sx = p.x + Math.sin(p.rotY) * 3.2, sz = p.z + Math.cos(p.rotY) * 3.2;
     controls.travelTo(sx, sz, { x: p.x, z: p.z, pitch: 0.12 }, { speed: 12 });
-    pendingOpen = { then, t: 0 };
+    pendingOpen = { then, travel: controls.travel };
   }
   let pendingOpen = null;
 
@@ -164,23 +173,31 @@ async function boot() {
   const marker = new THREE.Mesh(new THREE.RingGeometry(0.25, 0.32, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 2, 2.5), transparent: true, depthWrite: false }));
   marker.rotation.x = -Math.PI / 2; marker.visible = false; scene.add(marker);
   let markerT = 0;
-  function tapMarker(p) { marker.position.set(p.x, 0.16, p.z); marker.visible = true; markerT = 0; }
+  function tapMarker(p) { marker.position.set(p.x, groundHeight(p.x, p.z) + 0.04, p.z); marker.visible = true; markerT = 0; }
 
   // ---------- sheets ----------
   function sheetOpen() { return !$('guide').classList.contains('hidden') || !$('detail').classList.contains('hidden'); }
+  function closeSheets() { $('guide').classList.add('hidden'); $('detail').classList.add('hidden'); }
+  function toggleGuide() { $('detail').classList.add('hidden'); $('guide').classList.toggle('hidden'); $('guide').scrollTop = 0; audio.blip(880); }
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => $(b.dataset.close).classList.add('hidden')));
-  $('btn-guide').onclick = () => { $('detail').classList.add('hidden'); $('guide').classList.toggle('hidden'); audio.blip(880); };
+  $('btn-guide').onclick = toggleGuide;
+  window.addEventListener('keydown', (e) => {
+    if (!controls.enabled) return;
+    if (e.code === 'Escape') closeSheets();
+    else if (e.code === 'KeyG' || e.code === 'Tab') { e.preventDefault(); toggleGuide(); }
+  });
   $('btn-run').onclick = () => { controls.runToggle = !controls.runToggle; $('btn-run').classList.toggle('on', controls.runToggle); audio.blip(660); };
   $('btn-gyro').onclick = async () => {
     if (controls.gyro.on) { controls.disableGyro(); $('btn-gyro').classList.remove('on'); }
     else if (await controls.enableGyro()) $('btn-gyro').classList.add('on');
+    else toast('ジャイロを利用できません(センサー非対応または許可されていません)');
     audio.blip(740);
   };
   // stop touch on sheets propagating to canvas
   ['guide', 'detail'].forEach((id) => $(id).addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true }));
 
   function heatRow(it, d, di, ki) {
-    return `<div class="d-row" data-d="${di}" data-k="${ki}"><em>${it.date}</em><b>${it.title}</b><span class="h" style="color:${d.color}">${it.heat}</span></div>`;
+    return `<div class="d-row" data-d="${di}" data-k="${ki}"><em>${esc(it.date)}</em><b>${esc(it.title)}</b><span class="h" style="color:${d.color}">${it.heat}</span></div>`;
   }
   function bindRows(root) {
     root.querySelectorAll('.d-row[data-d]').forEach((r) => r.addEventListener('click', () => {
@@ -192,16 +209,17 @@ async function boot() {
   function openItem(di, ki) {
     const d = DISTRICTS[di], it = d.items[ki];
     const img = it.img || d.img;
-    const src = it.src ? `<div class="d-src">出典: ${it.src}</div>` : '';
+    const src = it.src ? `<div class="d-src">出典: ${esc(it.src)}</div>` : '';
+    const heat = Math.max(0, Math.min(100, +it.heat || 0));
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('${img}')"></div>
-      <span class="d-tag" style="background:${d.color}">${d.name}</span>
-      <div class="d-title">${it.title}</div>
-      <div class="d-date">${it.date} ・ ${d.jp}</div>
-      <div class="d-body">${it.body}</div>
+      <div class="d-hero" style="background-image:${cssUrl(img)}"></div>
+      <span class="d-tag" style="background:${d.color}">${esc(d.name)}</span>
+      <div class="d-title">${esc(it.title)}</div>
+      <div class="d-date">${esc(it.date)} ・ ${esc(d.jp)}</div>
+      <div class="d-body">${esc(it.body)}</div>
       ${src}
-      <div class="d-heat">HEAT<div class="bar"><i style="width:${it.heat}%;background:linear-gradient(90deg,${d.color},#fff)"></i></div>${it.heat}</div>
-      <div class="d-more"><h4>MORE IN ${d.name}</h4>${d.items.map((x, k) => (k === ki ? '' : heatRow(x, d, di, k))).join('')}</div>`;
+      <div class="d-heat">HEAT<div class="bar"><i style="width:${heat}%;background:linear-gradient(90deg,${d.color},#fff)"></i></div>${heat}</div>
+      <div class="d-more"><h4>MORE IN ${esc(d.name)}</h4>${d.items.map((x, k) => (k === ki ? '' : heatRow(x, d, di, k))).join('')}</div>`;
     bindRows($('detail-body'));
     $('guide').classList.add('hidden');
     $('detail').classList.remove('hidden');
@@ -212,10 +230,10 @@ async function boot() {
     const d = DISTRICTS[di];
     const sorted = d.items.map((x, k) => [x, k]).sort((a, b) => b[0].heat - a[0].heat);
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('${d.img}')"></div>
-      <span class="d-tag" style="background:${d.color}">${d.name}</span>
-      <div class="d-title">${d.jp} ／ ${d.tagline}</div>
-      <div class="d-date">${d.items.length} TRENDS ・ ${AS_OF}</div>
+      <div class="d-hero" style="background-image:${cssUrl(d.img)}"></div>
+      <span class="d-tag" style="background:${d.color}">${esc(d.name)}</span>
+      <div class="d-title">${esc(d.jp)} ／ ${esc(d.tagline)}</div>
+      <div class="d-date">${d.items.length} TRENDS ・ ${esc(AS_OF)}</div>
       <div class="d-more"><h4>HEAT RANKING — タップで端末へ移動</h4>${sorted.map(([x, k]) => heatRow(x, d, di, k)).join('')}</div>`;
     bindRows($('detail-body'));
     $('guide').classList.add('hidden');
@@ -226,18 +244,19 @@ async function boot() {
   function openTop() {
     const catToD = { ent: 'music', sports: 'sports', world: 'world', tech: 'tech', life: 'life', games: 'games', anime: 'anime', news: 'news' };
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('/img/moon_skyline.jpg')"></div>
+      <div class="d-hero" style="background-image:${cssUrl('/img/moon_skyline.jpg')}"></div>
       <span class="d-tag" style="background:#27e0ff">TOP NOW</span>
       <div class="d-title">いま一番アツいトレンド</div>
-      <div class="d-date">${AS_OF}</div>
+      <div class="d-date">${esc(AS_OF)}</div>
       <div class="d-more"><h4>REAL-TIME RANKING</h4>${TOP_NOW.map((t, k) => {
         const di = DISTRICTS.findIndex((d) => d.id === catToD[t.c]);
         const d = DISTRICTS[Math.max(0, di)];
-        return `<div class="d-row" data-top="${Math.max(0, di)}"><em>#${k + 1}</em><b>${t.t}</b><span class="h" style="color:${d.color}">${t.heat}</span></div>`;
+        return `<div class="d-row" data-top="${Math.max(0, di)}"><em>#${k + 1}</em><b>${esc(t.t)}</b><span class="h" style="color:${d.color}">${t.heat}</span></div>`;
       }).join('')}</div>`;
     $('detail-body').querySelectorAll('[data-top]').forEach((r) => r.addEventListener('click', () => { $('detail').classList.add('hidden'); warpToDistrict(+r.dataset.top); }));
     $('guide').classList.add('hidden');
     $('detail').classList.remove('hidden');
+    $('detail').scrollTop = 0;
     audio.blip(1040);
   }
 
@@ -252,7 +271,7 @@ async function boot() {
     const p = it._pos;
     const sx = p.x + Math.sin(p.rotY) * 3.2, sz = p.z + Math.cos(p.rotY) * 3.2;
     controls.travelTo(sx, sz, { x: p.x, z: p.z, pitch: 0.12 }, { warp: true });
-    pendingOpen = { then: () => openItem(di, ki), t: 0 };
+    pendingOpen = { then: () => openItem(di, ki), travel: controls.travel };
     audio.whoosh();
   }
   function warpHome() {
@@ -262,10 +281,10 @@ async function boot() {
 
   function buildGuide() {
     const root = $('guide-list');
-    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:url('/img/moon_skyline.jpg')"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW</small></div></div>` +
+    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:${cssUrl('/img/moon_skyline.jpg')}"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW</small></div></div>` +
       DISTRICTS.map((d, i) => {
         const top = [...d.items].sort((a, b) => b.heat - a.heat)[0];
-        return `<div class="g-item" data-i="${i}" style="background-image:url('${d.img}')"><i style="background:${d.color}"></i><div><b style="color:${d.color}">${d.name}</b><small>${top.title}</small></div></div>`;
+        return `<div class="g-item" data-i="${i}" style="background-image:${cssUrl(d.img)}"><i style="background:${d.color}"></i><div><b style="color:${d.color}">${esc(d.name)}</b><small>${esc(top ? top.title : d.jp)}</small></div></div>`;
       }).join('');
     root.querySelectorAll('.g-item').forEach((el) => el.addEventListener('click', () => {
       $('guide').classList.add('hidden');
@@ -304,7 +323,16 @@ async function boot() {
     g.addColorStop(0, 'rgba(39,224,255,.35)'); g.addColorStop(1, 'rgba(39,224,255,0)');
     mm.fillStyle = g; mm.beginPath(); mm.moveTo(c, c); mm.arc(c, c, 70, -Math.PI / 2 - 0.6, -Math.PI / 2 + 0.6); mm.fill();
   }
-  $('minimap').addEventListener('click', () => { $('guide').classList.remove('hidden'); });
+  $('minimap').addEventListener('click', () => { $('detail').classList.add('hidden'); $('guide').classList.remove('hidden'); $('guide').scrollTop = 0; audio.blip(880); });
+
+  // small transient notice (gyro unavailable, context restored, …)
+  let toastT = 0;
+  function toast(msg) {
+    let el = $('toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); }
+    el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2600);
+  }
 
   // ---------- zone + prompt ----------
   function zoneAt(x, z) {
@@ -317,6 +345,7 @@ async function boot() {
       const al = x * dir.x + z * dir.z;
       if (al > 0 && lat < bd) { bd = lat; best = i; }
     }
+    if (best < 0) return { name: 'CENTRAL PLAZA', d: -1 };
     return { name: `${DISTRICTS[best].name} AVE.`, d: best };
   }
   const center = new THREE.Vector2(0, 0);
@@ -347,7 +376,7 @@ async function boot() {
   $('prompt').addEventListener('click', () => {
     ray.setFromCamera(center, camera);
     const hit = ray.intersectObjects(pickables, false)[0];
-    if (hit) openHit(hit.object.userData, 0);
+    if (hit && hit.distance < 16) openHit(hit.object.userData, hit.distance);
   });
 
   // ---------- audio (procedural: rain, city hum, blips) ----------
@@ -356,7 +385,15 @@ async function boot() {
   // ---------- loop ----------
   let t = 0, last = performance.now(), frame = 0;
   const clockEl = $('clk');
+  const updClock = () => { clockEl.textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }); };
+  updClock();
   let lastDraw = 0;
+  document.addEventListener('visibilitychange', () => {
+    // don't let a long background pause count as one giant frame; pause audio in the background
+    last = performance.now();
+    audio.suspend(document.hidden);
+    if (document.hidden) controls.releaseInputs();
+  });
   function loop(now) {
     requestAnimationFrame(loop);
     if (QA_OFF.fps && now - lastDraw < 1000 / QA_OFF.fps) return;
@@ -375,14 +412,19 @@ async function boot() {
       const a = t * 0.05;
       introFrom.set(Math.sin(a) * 60, 34, Math.cos(a) * 60);
       introTo.copy(camera.position);
-      const q = camera.quaternion.clone();
+      introQ.copy(camera.quaternion);
       camera.position.lerpVectors(introFrom, introTo, e);
-      const q0 = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(introFrom, new THREE.Vector3(0, 16, 0), new THREE.Vector3(0, 1, 0)));
-      camera.quaternion.slerpQuaternions(q0, q, e);
+      introQ0.setFromRotationMatrix(introM.lookAt(introFrom, introLook, UP));
+      camera.quaternion.slerpQuaternions(introQ0, introQ, e);
     } else {
       controls.update(dt);
     }
-    if (pendingOpen && !controls.travel) { const f = pendingOpen.then; pendingOpen = null; setTimeout(f, 120); }
+    if (pendingOpen && controls.travel !== pendingOpen.travel) {
+      // open only if the approach finished on its own (not cancelled by the joystick or a new travel)
+      const f = pendingOpen.then, ok = controls.lastTravelEnd !== 'cancelled' && !controls.travel;
+      pendingOpen = null;
+      if (ok) setTimeout(f, 120);
+    }
     engine.final.uniforms.uWarp.value = controls.warpAmt || 0;
 
     sky.update(t, camera.position);
@@ -402,12 +444,9 @@ async function boot() {
       const z = zoneAt(controls.pos.x, controls.pos.z);
       if (z.name !== lastZone) { $('zone').textContent = z.name; lastZone = z.name; audio.zone(z.d); }
       updatePrompt();
-      audio.update(controls.pos, controls.vel.length());
+      audio.update(controls.pos, controls.vel.length(), dt * 3);
     }
-    if (frame % 30 === 0) {
-      const d = new Date();
-      clockEl.textContent = d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
-    }
+    if (frame % 30 === 0) updClock();
   }
   requestAnimationFrame(loop);
   // QA helper: instant teleport (x,z,yaw,pitch)
@@ -420,6 +459,7 @@ function makeAudio() {
   let ctx = null, master, rainG, humG, stepT = 0;
   const api = {
     start() {
+      if (ctx) return;
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
@@ -447,6 +487,10 @@ function makeAudio() {
         });
       } catch (e) { ctx = null; }
     },
+    suspend(hidden) {
+      if (!ctx) return;
+      try { if (hidden) ctx.suspend(); else ctx.resume(); } catch (e) { /* ignore */ }
+    },
     blip(f = 880) {
       if (!ctx) return;
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -466,11 +510,13 @@ function makeAudio() {
       s.connect(f).connect(g).connect(master); s.start();
     },
     zone(d) { if (ctx && d >= 0) api.blip(520 + d * 60); },
-    update(pos, spd) {
+    update(pos, spd, dt = 0.05) {
       if (!ctx) return;
-      // footsteps
+      // iOS/Android may start the context suspended or suspend it after an interruption
+      if (ctx.state === 'suspended' && !document.hidden) ctx.resume().catch(() => {});
+      // footsteps (frame-rate independent: ~1.8 steps/s at walking speed)
       if (spd > 0.8) {
-        stepT -= 0.05 * (spd / 4.2);
+        stepT -= dt * 1.8 * (spd / 4.2);
         if (stepT <= 0) {
           stepT = 1;
           const len = ctx.sampleRate * 0.09;
@@ -491,5 +537,8 @@ function makeAudio() {
 
 boot().catch((e) => {
   console.error(e);
-  setMsg('エラー: ' + e.message);
+  const gl = /WebGL|context/i.test(String(e && e.message));
+  setMsg(gl ? 'エラー: この端末/ブラウザでは WebGL を利用できません' : 'エラー: ' + (e && e.message));
+  const b = $('enter');
+  if (b) { b.disabled = false; b.textContent = 'RELOAD'; b.onclick = () => location.reload(); }
 });
