@@ -3,7 +3,9 @@
 export const QA = new URLSearchParams(location.search).has('qa');
 // Root-absolute asset paths ('/img/x.jpg') are rewritten against Vite's base so the site also works
 // under a sub-path (GitHub Pages: /IMATORE/). With base './' this yields document-relative URLs.
-const BASE = (import.meta.env && import.meta.env.BASE_URL) || '/';
+// Raw (un-bundled) serving — e.g. GitHub Pages on the repo root — has no import.meta.env and the
+// static files still live under public/, so resolve them there relative to the document.
+const BASE = import.meta.env ? import.meta.env.BASE_URL || '/' : './public/';
 export const asset = (p) => (typeof p === 'string' && p.startsWith('/') && !p.startsWith('//') ? BASE + p.slice(1) : p);
 export const texPath = (p) => asset(QA && p.startsWith('/tex/') && !p.startsWith('/tex/lo/') ? p.replace('/tex/', '/tex/lo/') : p);
 

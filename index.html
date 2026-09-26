@@ -7,11 +7,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>IMATORE 今トレ — 3D Trend Hub 2026.09.24</title>
+  <title>IMATORE 今トレ — 3D Trend Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="./src/style.css" />
+  <!-- Lets the un-bundled source run directly on static hosts (GitHub Pages serving the repo root).
+       Vite ignores this for its own bundle (three is resolved from node_modules at build time). -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
   <canvas id="gl"></canvas>
@@ -67,6 +77,6 @@
     <small>ROTATE TO LANDSCAPE ・ 横画面・全画面専用ハブ</small>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
