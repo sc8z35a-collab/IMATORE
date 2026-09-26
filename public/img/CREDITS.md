@@ -1,0 +1,35 @@
+# Image credits
+- tabletennis.png — AI generated (Genspark nano-banana-2)
+- moon_ltokyo.jpg — "full moon over little tokyo" Jim Winstead, Flickr (CC)  https://www.flickr.com/photos/jimwinstead/63741925/
+- tokyo_view.jpg — kobakou, Flickr (CC) https://www.flickr.com/photos/kobakou/8460386628/
+- moon_skyline.jpg — PxHere (CC0) https://pxhere.com/en/photo/1218140
+- tigers_fans.jpg — wallyg, Flickr (CC) https://www.flickr.com/photos/wallyg/5845871846
+- tgs2008.jpg — lazysupper, Flickr (CC) https://www.flickr.com/photos/digdug/2930389797/
+- HDRI/Textures — Poly Haven (CC0)
+- supercomputer.jpg — rawpixel (CC0) https://www.rawpixel.com/image/3322310/free-photo-image-server-supercomputer-cc0
+- shibuya_night.jpg — PickPik (Royalty-free) https://www.pickpik.com/billboards-city-crowd-people-road-shibuya-97623
+- shibuya2.jpg — PickPik (Royalty-free) https://www.pickpik.com/shibuya-intersection-skyline-night-darkness-glitter-127083
+- tse.jpg — DocChewbacca, Flickr (CC) https://www.flickr.com/photos/st3f4n/2865510059
+- artemis.jpg — NASA (Public Domain) https://www.nasa.gov/blogs/missions/2022/11/21/artemis-i-flight-day-six-orion-performs-lunar-flyby-closest-outbound-approach/
+- artemis2_moon.jpg — NASA (Public Domain) https://www.nasa.gov/image-article/full-moon-over-artemis-ii/
+- stadium_night.jpg — PxHere (CC0) https://pxhere.com/en/photo/1566397
+- stadium_crowd.jpg — PxHere (CC0) https://pxhere.com/en/photo/726322
+- typhoon.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-shanshan-approaches-japan-92573/
+- typhoon2.jpg — NASA Earth Observatory (Public Domain) https://science.nasa.gov/earth/earth-observatory/typhoon-mindulle-over-japan-88616/
+- moon_color.jpg / moon_disp.jpg — NASA SVS CGI Moon Kit (Public Domain) https://svs.gsfc.nasa.gov/4720
+- sumo1.jpg — Justin Scott (fligtar), Flickr (CC) https://www.flickr.com/photos/fligtar/8070181642/
+- sumo2.jpg — Darcy Moore, Flickr (CC) https://www.flickr.com/photos/darcymoore/24425281285
+- pingpong.jpg — PxHere (CC0) https://pxhere.com/en/photo/822217
+- soccer_jp.jpg — yoppy, Flickr (CC) https://www.flickr.com/photos/spilt-milk/2578657664/
+- soccer_matsumoto.jpg — PxHere (CC0) https://pxhere.com/en/photo/1247785
+- swim1.jpg — PxHere (CC0) https://pxhere.com/en/photo/625079
+- swim2.jpg — Needpix (CC0) https://www.needpix.com/photo/download/1180373/
+- whitehouse_night.jpg — NASA Goddard, Flickr (CC BY) https://www.flickr.com/photos/nasa_goddard/22228747400
+- concert_purple.jpg — PxHere (CC0) https://pxhere.com/en/photo/1559975
+- akiba1.jpg — freeimageslive (free) https://freeimageslive.co.uk/free_stock_image/akihabara-night-jpg
+- akiba2.jpg — IQRemix, Flickr (CC) https://www.flickr.com/photos/iqremix/17241409568
+- akiba3.jpg — Luke Zeme, Flickr (CC) https://www.flickr.com/photos/lukezemephotography/8286763878
+- skate_bowl.jpg — PxHere (CC0) https://pxhere.com/en/photo/998119
+- skatepark_pd.jpg — Public Domain Pictures (PD) https://www.publicdomainpictures.net/en/view-image.php?image=437660&picture=skatepark
+- moon_aoto.jpg — "Super Harvest Moon at Aoto, Katsushika-ku" Yoshikazu TAKADA, Flickr (CC BY) https://www.flickr.com/photos/yoshikazut/21565469910
+- marathon.jpg — PxHere (CC0) https://pxhere.com/en/photo/1534877 (generic marathon image; not the athlete in the article)
