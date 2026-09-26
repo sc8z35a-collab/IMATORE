@@ -295,7 +295,8 @@ export class City {
     // huge vertical screen at the end of the avenue
     const f = avePoint(i, AVE_END + 14 - 12.2, 0);
     this.screens.push({ x: f.x, y: 14 + 22, z: f.z, yaw, w: 20, h: 36, district: i, kind: 'end' });
-    b.add('metalDark', box(21, 37, 0.5), mat(f.x - d.x * 0.1, 14 + 22 - 18.5, f.z - d.z * 0.1, yaw));
+    // backing frame sits BEHIND the screen (further along +d, away from the viewer)
+    b.add('metalDark', box(21, 37, 0.5), mat(f.x + d.x * 0.4, 14 + 22 - 18.5, f.z + d.z * 0.4, yaw));
   }
 
   // ---------- distant skyline ring ----------

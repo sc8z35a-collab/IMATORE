@@ -28,6 +28,88 @@ class PropSet {
   }
 }
 
+// ---------- procedural street tree ----------
+// Leaf atlas: a canvas of many small overlapping leaves (alpha). Crown: ~70 cards scattered in an
+// ellipsoid shell, normals bent outward from the crown centre so lighting reads as a soft volume
+// instead of individual flat planes. Branches are real geometry visible through the gaps.
+let _tree = null;
+function leafTexture() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'); const L = rng(17);
+  for (let k = 0; k < 420; k++) {
+    // cluster density falls off toward the edge -> ragged, natural silhouette
+    const a = L() * Math.PI * 2, r = Math.pow(L(), 0.7) * S * 0.46;
+    const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
+    const len = 20 + L() * 22, wid = len * (0.42 + L() * 0.12), rot = L() * Math.PI * 2;
+    const h = 95 + L() * 30, sat = 35 + L() * 25, lum = 22 + L() * 26 - (r / S) * 8;
+    g.save(); g.translate(x, y); g.rotate(rot);
+    g.fillStyle = `hsl(${h},${sat}%,${lum}%)`;
+    g.beginPath(); g.moveTo(-len / 2, 0);
+    g.quadraticCurveTo(0, -wid, len / 2, 0); g.quadraticCurveTo(0, wid, -len / 2, 0); g.fill();
+    g.strokeStyle = `hsla(${h},${sat}%,${lum + 14}%,.55)`; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-len / 2, 0); g.lineTo(len / 2, 0); g.stroke();
+    g.restore();
+  }
+  // a few twigs
+  g.strokeStyle = 'rgba(40,30,22,.9)'; g.lineWidth = 3;
+  for (let k = 0; k < 6; k++) { const a = L() * 6.28; g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + Math.cos(a) * S * 0.3, S / 2 + Math.sin(a) * S * 0.3); g.stroke(); }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.generateMipmaps = true;
+  return t;
+}
+function makeTree() {
+  if (_tree) return _tree;
+  const L = rng(5);
+  const parts = [];
+  const trunk = new THREE.CylinderGeometry(0.09, 0.17, 2.6, 9); trunk.translate(0, 1.3, 0); parts.push(trunk);
+  // forked scaffold branches from the trunk top (zelkova vase form)
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2 + L() * 0.6, tilt = 0.45 + L() * 0.35, len = 2.2 + L() * 1.2;
+    const dir = new THREE.Vector3(Math.cos(a) * Math.sin(tilt), Math.cos(tilt), Math.sin(a) * Math.sin(tilt));
+    const br = new THREE.CylinderGeometry(0.035, 0.08, len, 6); br.translate(0, len / 2, 0);
+    br.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, dir));
+    br.translate(0, 2.45, 0); parts.push(br);
+    // secondary twig
+    const d2 = dir.clone().applyAxisAngle(up, 0.7).add(new THREE.Vector3(0, 0.35, 0)).normalize();
+    const tw = new THREE.CylinderGeometry(0.018, 0.035, len * 0.6, 5); tw.translate(0, len * 0.3, 0);
+    tw.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d2));
+    tw.translate(dir.x * len * 0.55, 2.45 + dir.y * len * 0.55, dir.z * len * 0.55); parts.push(tw);
+  }
+  const trunkGeo = mergeGeometries(parts.map((g) => g.toNonIndexed()));
+  trunkGeo.computeVertexNormals();
+  // leaf cards
+  const cards = [];
+  const C = new THREE.Vector3(0, 4.6, 0), RX = 2.3, RY = 1.55;
+  const n = new THREE.Vector3(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  for (let k = 0; k < 74; k++) {
+    // point in an ellipsoid shell (biased outward)
+    const u = L() * 2 - 1, th = L() * Math.PI * 2, rr = 0.55 + Math.pow(L(), 0.5) * 0.45;
+    const sx = Math.sqrt(1 - u * u) * Math.cos(th), sz = Math.sqrt(1 - u * u) * Math.sin(th);
+    const px = sx * RX * rr, py = u * RY * rr, pz = sz * RX * rr;
+    if (py < -RY * 0.75) continue; // open underside
+    const sz2 = 1.1 + L() * 0.8;
+    const pl = new THREE.PlaneGeometry(sz2, sz2);
+    e.set((L() - 0.5) * 2.4, L() * Math.PI * 2, (L() - 0.5) * 2.4); q.setFromEuler(e);
+    pl.applyQuaternion(q); pl.translate(C.x + px, C.y + py, C.z + pz);
+    // bend normals outward from crown centre (soft volumetric shading, both faces)
+    const P = pl.attributes.position, N = pl.attributes.normal;
+    for (let v = 0; v < P.count; v++) {
+      n.set(P.getX(v) - C.x, (P.getY(v) - C.y) * 1.4, P.getZ(v) - C.z).normalize();
+      N.setXYZ(v, n.x, n.y, n.z);
+    }
+    cards.push(pl);
+  }
+  const leafGeo = mergeGeometries(cards);
+  const leafMat = new THREE.MeshStandardMaterial({
+    map: leafTexture(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.78, metalness: 0,
+    color: 0x9fb8a0, envMapIntensity: 0.4, alphaToCoverage: true,
+  });
+  const barkMat = new THREE.MeshStandardMaterial({ color: 0x3a3029, roughness: 0.92, envMapIntensity: 0.3 });
+  _tree = { trunkGeo, leafGeo, leafMat, barkMat };
+  return _tree;
+}
+
 export class Props {
   constructor(scene, M, districts) {
     this.scene = scene; this.M = M; this.districts = districts;
@@ -83,25 +165,11 @@ export class Props {
       { geo: vmFront, mat: new THREE.MeshBasicMaterial({ map: vmTex, color: new THREE.Color(1.8, 1.8, 1.8) }), noShadow: true },
     ]);
 
-    // ---- street tree (zelkova-ish): trunk + clustered leaf blobs ----
-    const trunk = new THREE.CylinderGeometry(0.1, 0.18, 3.2, 8); trunk.translate(0, 1.6, 0);
-    const leaves = [];
-    const LR = rng(5);
-    for (let k = 0; k < 9; k++) {
-      const s = new THREE.IcosahedronGeometry(0.9 + LR() * 0.7, 1);
-      const a = LR() * Math.PI * 2, r = LR() * 1.1;
-      s.translate(Math.cos(a) * r, 3.6 + LR() * 1.8, Math.sin(a) * r);
-      leaves.push(s);
-    }
-    const leafGeo = mergeGeometries(leaves);
-    // jitter vertices for organic look
-    const lp = leafGeo.attributes.position;
-    for (let k = 0; k < lp.count; k++) lp.setXYZ(k, lp.getX(k) + (LR() - 0.5) * 0.25, lp.getY(k) + (LR() - 0.5) * 0.25, lp.getZ(k) + (LR() - 0.5) * 0.25);
-    leafGeo.computeVertexNormals();
+    // ---- street tree (zelkova-ish): trunk + forked branches + alpha-tested leaf-cluster cards ----
+    const { trunkGeo, leafGeo, leafMat, barkMat } = makeTree();
     const grate = new THREE.BoxGeometry(1.4, 0.04, 1.4); grate.translate(0, 0.02, 0);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x14261a, roughness: 0.9, flatShading: true, envMapIntensity: 0.35 });
     const trees = new PropSet('trees', [
-      { geo: trunk, mat: new THREE.MeshStandardMaterial({ color: 0x2b2420, roughness: 0.95 }) },
+      { geo: trunkGeo, mat: barkMat },
       { geo: leafGeo, mat: leafMat },
       { geo: grate, mat: M.metalDark, noShadow: true },
     ]);
