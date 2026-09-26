@@ -18,53 +18,87 @@ const CARS_AVE = 0; // avenues are pedestrian-only (歩行者天国) — kiosks 
 // ---------- pedestrians ----------
 // Each instance has: aPath (x0,z0,x1,z1), aParam (speed, phase, height, umbrella?), aColor
 function pedGeometry() {
-  // stylised human ~1.7 m: legs, torso, head (low poly, but reads fine at night with rim light)
-  const legL = new THREE.BoxGeometry(0.14, 0.82, 0.16); legL.translate(-0.09, 0.41, 0);
-  const legR = new THREE.BoxGeometry(0.14, 0.82, 0.16); legR.translate(0.09, 0.41, 0);
-  const torso = new THREE.CapsuleGeometry(0.2, 0.42, 4, 8); torso.translate(0, 1.13, 0);
-  const head = new THREE.SphereGeometry(0.115, 10, 8); head.translate(0, 1.58, 0);
-  const bag = new THREE.BoxGeometry(0.1, 0.28, 0.24); bag.translate(0.26, 0.95, 0);
-  // tag parts via a "part" attribute: 0 leg L, 1 leg R, 2 body, 3 head, 4 bag
-  const parts = [legL, legR, torso, head, bag].map((g, k) => {
-    const q = g.index ? g.toNonIndexed() : g;
-    q.setAttribute('part', new THREE.Float32BufferAttribute(new Float32Array(q.attributes.position.count).fill(k), 1));
-    return q;
-  });
-  return mergeGeometries(parts, false);
+  // ~1.70 m human built from tapered primitives. "part" ids drive animation + colour:
+  // 0 leg L, 1 leg R, 2 torso(top), 3 head/skin, 4 hair, 5 arm L, 6 arm R, 7 hips(bottoms), 8 shoes, 9 bag
+  const P = [];
+  const add = (g, part) => { const q = g.index ? g.toNonIndexed() : g; q.setAttribute('part', new THREE.Float32BufferAttribute(new Float32Array(q.attributes.position.count).fill(part), 1)); P.push(q); };
+  for (const [sx, id] of [[-0.095, 0], [0.095, 1]]) {
+    const thigh = new THREE.CylinderGeometry(0.085, 0.07, 0.46, 8); thigh.translate(sx, 0.66, 0); add(thigh, id);
+    const shin = new THREE.CylinderGeometry(0.066, 0.05, 0.44, 8); shin.translate(sx, 0.24, 0); add(shin, id);
+    const shoe = new THREE.BoxGeometry(0.1, 0.07, 0.26); shoe.translate(sx, 0.035, 0.04); add(shoe, 8);
+  }
+  const hips = new THREE.CylinderGeometry(0.17, 0.16, 0.2, 10); hips.scale(1, 1, 0.72); hips.translate(0, 0.92, 0); add(hips, 7);
+  const torso = new THREE.CylinderGeometry(0.2, 0.165, 0.5, 12); torso.scale(1, 1, 0.62); torso.translate(0, 1.26, 0); add(torso, 2);
+  const shoulders = new THREE.SphereGeometry(0.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2); shoulders.scale(1.05, 0.35, 0.62); shoulders.translate(0, 1.5, 0); add(shoulders, 2);
+  for (const [sx, id] of [[-0.235, 5], [0.235, 6]]) {
+    const up = new THREE.CylinderGeometry(0.055, 0.048, 0.3, 7); up.translate(sx, 1.33, 0); add(up, id);
+    const fore = new THREE.CylinderGeometry(0.046, 0.038, 0.28, 7); fore.translate(sx, 1.05, 0.02); add(fore, id);
+    const hand = new THREE.SphereGeometry(0.042, 6, 5); hand.translate(sx, 0.9, 0.03); add(hand, 3);
+  }
+  const neck = new THREE.CylinderGeometry(0.05, 0.055, 0.08, 8); neck.translate(0, 1.55, 0); add(neck, 3);
+  const head = new THREE.SphereGeometry(0.1, 14, 12); head.scale(0.92, 1.12, 1); head.translate(0, 1.66, 0.005); add(head, 3);
+  const hair = new THREE.SphereGeometry(0.108, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62); hair.scale(0.95, 1.1, 1.04); hair.translate(0, 1.675, -0.012); add(hair, 4);
+  const bag = new THREE.BoxGeometry(0.26, 0.34, 0.12); bag.translate(0, 1.22, -0.17); add(bag, 9); // backpack / tote (hidden per-instance)
+  return mergeGeometries(P, false);
 }
 function umbrellaGeometry() {
-  const canopy = new THREE.ConeGeometry(0.55, 0.26, 12, 1, true); canopy.translate(0, 2.02, 0);
-  const shaft = new THREE.CylinderGeometry(0.012, 0.012, 0.75, 4); shaft.translate(0, 1.64, 0);
-  return mergeGeometries([canopy.toNonIndexed(), shaft.toNonIndexed()], false);
+  // 8-panel canopy with slight scallop, shaft and J handle; held in the right hand (x=+0.23)
+  const canopy = new THREE.ConeGeometry(0.52, 0.24, 8, 2, true);
+  const pos = canopy.attributes.position;
+  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < 0) { const x = pos.getX(i), z = pos.getZ(i); pos.setY(i, y + 0.02 * Math.cos(Math.atan2(z, x) * 8)); } }
+  canopy.computeVertexNormals(); canopy.translate(0, 2.0, 0);
+  const tip = new THREE.CylinderGeometry(0.008, 0.008, 0.08, 4); tip.translate(0, 2.16, 0);
+  const shaft = new THREE.CylinderGeometry(0.009, 0.009, 0.82, 4); shaft.translate(0, 1.58, 0);
+  const g = mergeGeometries([canopy.toNonIndexed(), tip.toNonIndexed(), shaft.toNonIndexed()], false);
+  g.translate(0.2, 0, 0.12);
+  return g;
 }
 
 const pedVS = /* glsl */ `
-  attribute vec4 aPath; attribute vec4 aParam; attribute vec3 aColor; attribute float part;
+  attribute vec4 aPath; attribute vec4 aParam; attribute vec3 aColor; attribute vec4 aLook; attribute float part;
   uniform float uTime;
   varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vPart;
+  vec3 hsv(float h){ return clamp(abs(mod(h*6.0+vec3(0,4,2),6.0)-3.0)-1.0,0.0,1.0); }
   void main(){
     float spd = aParam.x, ph = aParam.y, hs = aParam.z;
     vec2 A = aPath.xy, B = aPath.zw;
-    float L = length(B - A);
-    // ping-pong along the path
+    float L = max(length(B - A), 0.01);
     float s = fract((uTime * spd + ph) / (2.0 * L)) * 2.0;
     float dirSign = s < 1.0 ? 1.0 : -1.0;
     float u = s < 1.0 ? s : 2.0 - s;
+    // ease at the turn-around so people don't snap
+    u = smoothstep(0.0, 1.0, u) * 0.12 + u * 0.88;
     vec2 P = mix(A, B, u);
     vec2 D = normalize(B - A) * dirSign;
     float yaw = atan(D.x, D.y);
     vec3 p = position;
-    // walk cycle
-    float cyc = uTime * spd * 3.4 + ph * 7.0;
-    if (part < 0.5) { p.z += sin(cyc) * 0.22 * step(p.y, 0.8); p.y -= max(0.0, -cos(cyc)) * 0.04; }
-    else if (part < 1.5) { p.z += sin(cyc + 3.14159) * 0.22 * step(p.y, 0.8); }
-    float bob = abs(sin(cyc)) * 0.035;
+    float cyc = uTime * spd * 3.1 + ph * 7.0;
+    float sw = sin(cyc);
+    // legs swing around the hip (y=0.9), arms counter-swing around the shoulder (y=1.47)
+    if (part < 0.5 || (part > 7.5 && part < 8.5 && p.x < 0.0)) { float a = sw * 0.42; float dy = p.y - 0.9; p.z += -dy * sin(a); p.y = 0.9 + dy * cos(a); }
+    else if (part < 1.5 || (part > 7.5 && part < 8.5)) { float a = -sw * 0.42; float dy = p.y - 0.9; p.z += -dy * sin(a); p.y = 0.9 + dy * cos(a); }
+    else if (part > 4.5 && part < 5.5) { float a = -sw * 0.32 * (1.0 - aParam.w * 0.7); float dy = p.y - 1.47; p.z += -dy * sin(a); p.y = 1.47 + dy * cos(a); }
+    else if (part > 5.5 && part < 6.5) { float a = sw * 0.32; float dy = p.y - 1.47; p.z += -dy * sin(a); p.y = 1.47 + dy * cos(a);
+      // umbrella holders raise the right forearm
+      if (aParam.w > 0.5 && p.y < 1.2) { p.y += 0.28; p.z += 0.18; } }
+    if (part > 8.5 && aLook.w < 0.5) p *= 0.0;
+    float bob = abs(sw) * 0.03;
     p.y = p.y * hs + bob;
+    p.x *= mix(0.92, 1.1, aLook.z);
     float c = cos(yaw), sn = sin(yaw);
     vec3 w = vec3(p.x * c + p.z * sn, p.y, -p.x * sn + p.z * c) + vec3(P.x, ${CURB.toFixed(3)}, P.y);
     vec3 n = normal; n = vec3(n.x * c + n.z * sn, n.y, -n.x * sn + n.z * c);
     vN = n; vW = w; vPart = part;
-    vCol = part > 2.5 && part < 3.5 ? vec3(0.55, 0.42, 0.34) : aColor;
+    // palette: top = aColor, bottoms from aLook.x, skin tone aLook.y, hair near-black / brown / dyed
+    vec3 skin = mix(vec3(0.62, 0.45, 0.36), vec3(0.85, 0.66, 0.54), aLook.y);
+    vec3 hair = aLook.y > 0.85 ? vec3(0.42, 0.28, 0.16) : (aLook.z > 0.9 ? vec3(0.6, 0.5, 0.36) : vec3(0.035, 0.03, 0.03));
+    vec3 bottoms = aLook.x < 0.45 ? vec3(0.05, 0.06, 0.09) : (aLook.x < 0.7 ? vec3(0.12, 0.16, 0.26) : (aLook.x < 0.85 ? vec3(0.45, 0.4, 0.33) : vec3(0.02)));
+    vCol = aColor;
+    if (part > 2.5 && part < 3.5) vCol = skin;
+    else if (part > 3.5 && part < 4.5) vCol = hair;
+    else if (part < 1.5 || (part > 6.5 && part < 7.5)) vCol = bottoms;
+    else if (part > 7.5 && part < 8.5) vCol = aLook.x > 0.6 ? vec3(0.8) : vec3(0.03);
+    else if (part > 8.5) vCol = vec3(0.04, 0.04, 0.05);
     gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
   }`;
 const umbVS = /* glsl */ `
@@ -73,16 +107,24 @@ const umbVS = /* glsl */ `
   varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vPart;
   void main(){
     float spd = aParam.x, ph = aParam.y, hs = aParam.z;
-    vec2 A = aPath.xy, B = aPath.zw; float L = length(B - A);
+    vec2 A = aPath.xy, B = aPath.zw; float L = max(length(B - A), 0.01);
     float s = fract((uTime * spd + ph) / (2.0 * L)) * 2.0;
+    float dirSign = s < 1.0 ? 1.0 : -1.0;
     float u = s < 1.0 ? s : 2.0 - s;
+    u = smoothstep(0.0, 1.0, u) * 0.12 + u * 0.88;
     vec2 P = mix(A, B, u);
-    float cyc = uTime * spd * 3.4 + ph * 7.0;
-    vec3 p = position; p.y = p.y * hs + abs(sin(cyc)) * 0.035;
-    // hide if no umbrella
+    vec2 D = normalize(B - A) * dirSign; float yaw = atan(D.x, D.y);
+    float cyc = uTime * spd * 3.1 + ph * 7.0;
+    vec3 p = position;
+    // slight forward tilt + sway with the stride
+    float tilt = 0.12 + sin(cyc) * 0.025;
+    float dy = p.y - 1.2; p.z += dy * sin(tilt); p.y = 1.2 + dy * cos(tilt);
+    p.y = p.y * hs + abs(sin(cyc)) * 0.03;
     p *= step(0.5, aParam.w);
-    vec3 w = p + vec3(P.x + 0.05, ${CURB.toFixed(3)}, P.y);
-    vN = normal; vW = w; vPart = 9.0;
+    float c = cos(yaw), sn = sin(yaw);
+    vec3 w = vec3(p.x * c + p.z * sn, p.y, -p.x * sn + p.z * c) + vec3(P.x, ${CURB.toFixed(3)}, P.y);
+    vec3 n = normal; vN = vec3(n.x * c + n.z * sn, n.y, -n.x * sn + n.z * c);
+    vW = w; vPart = 100.0;
     vCol = aColor;
     gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
   }`;
@@ -92,14 +134,21 @@ const pedFS = /* glsl */ `
   void main(){
     vec3 N = normalize(vN);
     vec3 V = normalize(uCam - vW);
-    // night lighting: cool sky from above, warm street bounce, neon rim
-    float up = N.y * 0.5 + 0.5;
-    vec3 amb = mix(vec3(0.05, 0.04, 0.06), vec3(0.09, 0.11, 0.18), up);
-    float rim = pow(1.0 - max(dot(N, V), 0.0), 2.5);
-    vec3 rimC = mix(vec3(1.0, 0.55, 0.8), vec3(0.45, 0.8, 1.0), fract(vW.x * 0.013 + vW.z * 0.011)) * 0.22;
-    vec3 col = vCol * (amb * 1.6 + 0.035) + rimC * rim;
-    if (vPart > 8.5) { // umbrella: translucent-ish, catches light
-      col = vCol * 0.28 + rimC * rim * 1.2 + vec3(0.02);
+    // key: cool moon from above-left, fill: warm sodium/LED bounce from the wet street, rim: neon
+    vec3 Lm = normalize(vec3(-0.4, 0.8, -0.3));
+    float dif = max(dot(N, Lm), 0.0);
+    float bounce = max(-N.y, 0.0) * 0.6 + 0.4 * (1.0 - abs(N.y));
+    vec3 light = vec3(0.10, 0.12, 0.2) * dif + vec3(0.2, 0.14, 0.1) * bounce + vec3(0.03, 0.03, 0.045);
+    float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+    float hue = fract(vW.x * 0.013 + vW.z * 0.011);
+    vec3 rimC = mix(vec3(1.0, 0.45, 0.8), vec3(0.4, 0.85, 1.0), hue) * 0.35;
+    vec3 col = vCol * light * 2.2 + rimC * rim;
+    // hair / wet clothing sheen
+    vec3 H = normalize(Lm + V);
+    col += vec3(0.25, 0.3, 0.4) * pow(max(dot(N, H), 0.0), 24.0) * (vPart > 3.5 && vPart < 4.5 ? 0.5 : 0.12);
+    if (vPart > 99.0) {
+      // umbrella canopy: vinyl (translucent, glows with city light), with bright rim edge
+      col = vCol * (0.18 + 0.35 * max(N.y, 0.0)) + rimC * rim * 1.6 + vec3(0.02);
     }
     float d = length(uCam - vW);
     float f = 1.0 - exp(-uFogDensity * uFogDensity * d * d);
@@ -255,18 +304,20 @@ export class CityLife {
       paths.push([{ x: Math.cos(a) * r0, z: Math.sin(a) * r0 }, { x: Math.cos(b) * r1, z: Math.sin(b) * r1 }]);
     }
     const n = paths.length;
-    const aPath = new Float32Array(n * 4), aParam = new Float32Array(n * 4), aColor = new Float32Array(n * 3), uColor = new Float32Array(n * 3);
-    const cloth = [[0.08, 0.08, 0.09], [0.16, 0.16, 0.18], [0.35, 0.33, 0.3], [0.12, 0.14, 0.22], [0.5, 0.48, 0.45], [0.3, 0.1, 0.1], [0.55, 0.55, 0.58], [0.2, 0.25, 0.18]];
+    const aPath = new Float32Array(n * 4), aParam = new Float32Array(n * 4), aColor = new Float32Array(n * 3), uColor = new Float32Array(n * 3), aLook = new Float32Array(n * 4);
+    // Tokyo autumn street palette: black/navy/charcoal dominate, beige trench, white shirts, occasional colour
+    const cloth = [[0.03, 0.03, 0.035], [0.03, 0.03, 0.035], [0.06, 0.07, 0.1], [0.12, 0.12, 0.13], [0.42, 0.36, 0.27], [0.62, 0.62, 0.64], [0.3, 0.08, 0.08], [0.2, 0.24, 0.16], [0.5, 0.42, 0.5], [0.08, 0.14, 0.3]];
     const umb = [[0.9, 0.92, 0.95], [0.05, 0.05, 0.06], [0.9, 0.2, 0.35], [0.2, 0.55, 0.95], [0.95, 0.8, 0.2], [0.85, 0.85, 0.9]];
     paths.forEach(([A, B], k) => {
       aPath.set([A.x, A.z, B.x, B.z], k * 4);
       aParam.set([0.9 + R() * 0.7, R() * 100, 0.92 + R() * 0.16, R() < 0.55 ? 1 : 0], k * 4);
       aColor.set(cloth[(R() * cloth.length) | 0], k * 3);
+      aLook.set([R(), R(), R(), R() < 0.4 ? 1 : 0], k * 4);
       // clear plastic umbrellas (ビニール傘) dominate in Japan
       uColor.set(R() < 0.55 ? umb[0] : umb[(R() * umb.length) | 0], k * 3);
     });
     const mat = new THREE.ShaderMaterial({ uniforms: this.U, vertexShader: pedVS, fragmentShader: pedFS });
-    const g = instanced(pedGeometry(), n, { aPath: [aPath, 4], aParam: [aParam, 4], aColor: [aColor, 3] });
+    const g = instanced(pedGeometry(), n, { aPath: [aPath, 4], aParam: [aParam, 4], aColor: [aColor, 3], aLook: [aLook, 4] });
     const mesh = new THREE.Mesh(g, mat); mesh.frustumCulled = false; mesh.name = 'crowd';
     this.group.add(mesh);
     const umat = new THREE.ShaderMaterial({ uniforms: this.U, vertexShader: umbVS, fragmentShader: pedFS, side: THREE.DoubleSide });
