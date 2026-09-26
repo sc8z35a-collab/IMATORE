@@ -27,6 +27,7 @@ export function toTex(c, { srgb = true, repeat = false, aniso = 8 } = {}) {
 
 // wrap Japanese / mixed text by character width
 export function wrapText(ctx, text, maxW) {
+  text = String(text ?? '');
   const lines = [];
   let line = '';
   for (const ch of text) {
@@ -178,7 +179,9 @@ export function facadeRoughTexture(style = 'office') {
 }
 
 function shade(hex, k) {
-  const n = parseInt(hex.slice(1), 16);
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.replace(/./g, (c) => c + c);
+  const n = parseInt(h, 16) || 0;
   const r = Math.min(255, ((n >> 16) & 255) * k) | 0,
     gg = Math.min(255, ((n >> 8) & 255) * k) | 0,
     b = Math.min(255, (n & 255) * k) | 0;
@@ -332,7 +335,7 @@ export function kioskTexture(item, district, idx) {
   const hg = g.createLinearGradient(44, 0, W - 44, 0);
   hg.addColorStop(0, col); hg.addColorStop(1, '#ffffff');
   g.fillStyle = hg;
-  g.fillRect(44, y, (W - 88) * item.heat / 100, 18);
+  g.fillRect(44, y, (W - 88) * Math.max(0, Math.min(100, item.heat)) / 100, 18);
   g.font = `700 26px ${OR}`;
   g.fillStyle = district.accent;
   g.fillText(`HEAT ${item.heat}`, 44, y + 50);
@@ -341,7 +344,7 @@ export function kioskTexture(item, district, idx) {
   g.fillStyle = 'rgba(234,246,255,.85)';
   g.font = `400 36px ${JP}`;
   const bl = wrapText(g, item.body, W - 88);
-  const maxL = Math.floor((H - y - 120) / 52);
+  const maxL = Math.max(1, Math.floor((H - y - 120) / 52));
   bl.slice(0, maxL).forEach((l, k) => g.fillText(k === maxL - 1 && bl.length > maxL ? l.slice(0, -1) + '…' : l, 44, y + k * 52));
   // footer
   g.fillStyle = col;
@@ -377,7 +380,9 @@ export function bannerTexture(district, headline) {
   g.fillStyle = district.accent;
   g.font = `700 54px ${JP}`;
   g.textAlign = 'right';
-  g.fillText('▶ ' + headline, W - 60, 460);
+  let hl = '▶ ' + headline;
+  if (g.measureText(hl).width > W - 140) { while (g.measureText(hl + '…').width > W - 140 && hl.length > 3) hl = hl.slice(0, -1); hl += '…'; }
+  g.fillText(hl, W - 60, 460);
   return toTex(c, { aniso: 16 });
 }
 
@@ -400,7 +405,8 @@ export class LedStrip {
     g.shadowColor = this.color; g.shadowBlur = 10;
     let x = 10;
     const t = this.text + '　◆　';
-    while (x < c.width) { g.fillText(t, x, c.height / 2); x += g.measureText(t).width; }
+    const tw = Math.max(64, g.measureText(t).width); // guard: 0-width text would loop forever
+    while (x < c.width) { g.fillText(t, x, c.height / 2); x += tw; }
     g.shadowBlur = 0;
     // LED dot mask
     g.fillStyle = 'rgba(0,0,0,.45)';
@@ -423,13 +429,14 @@ export function towerTexture(list) {
     g.font = `900 ${rh * 0.52}px ${JP}`;
     g.textBaseline = 'middle';
     let k = r * 3;
+    if (!list.length) break;
     while (x < W + 400) {
       const it = list[k % list.length];
       const s = `${it.t}　`;
       g.fillStyle = cols[(k + r) % cols.length];
       g.shadowColor = g.fillStyle; g.shadowBlur = 24;
       g.fillText(s, x, rh * r + rh / 2);
-      x += g.measureText(s).width + 60;
+      x += Math.max(40, g.measureText(s).width) + 60;
       k++;
     }
   }
@@ -477,8 +484,5 @@ export function plazaFloorTexture(districts) {
     g.restore();
   });
   g.shadowBlur = 0;
-  g.fillStyle = 'rgba(255,255,255,.9)';
-  g.font = `900 120px ${JP}`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
   return toTex(c, { aniso: 16 });
 }

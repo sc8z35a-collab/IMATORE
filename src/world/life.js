@@ -69,7 +69,7 @@ const pedVS = /* glsl */ `
     // ease at the turn-around so people don't snap
     u = smoothstep(0.0, 1.0, u) * 0.12 + u * 0.88;
     vec2 P = mix(A, B, u);
-    vec2 D = normalize(B - A) * dirSign;
+    vec2 D = (B - A) / L * dirSign;
     float yaw = atan(D.x, D.y);
     vec3 p = position;
     float cyc = uTime * spd * 3.1 + ph * 7.0;
@@ -113,7 +113,7 @@ const umbVS = /* glsl */ `
     float u = s < 1.0 ? s : 2.0 - s;
     u = smoothstep(0.0, 1.0, u) * 0.12 + u * 0.88;
     vec2 P = mix(A, B, u);
-    vec2 D = normalize(B - A) * dirSign; float yaw = atan(D.x, D.y);
+    vec2 D = (B - A) / L * dirSign; float yaw = atan(D.x, D.y);
     float cyc = uTime * spd * 3.1 + ph * 7.0;
     vec3 p = position;
     // slight forward tilt + sway with the stride
@@ -209,10 +209,10 @@ const carVS = (lamp) => /* glsl */ `
       vec2 T = vec2(-sin(a), cos(a)) * aParam.w;
       yaw = atan(T.x, T.y);
     } else {
-      vec2 A = aPath.xy, B = aPath.zw; float L = length(B - A);
+      vec2 A = aPath.xy, B = aPath.zw; float L = max(length(B - A), 0.01);
       float u = fract((uTime * spd + ph) / L);
       P = mix(A, B, u);
-      vec2 D = normalize(B - A); yaw = atan(D.x, D.y);
+      vec2 D = (B - A) / L; yaw = atan(D.x, D.y);
     }
     vec3 p = position;
     float c = cos(yaw), s = sin(yaw);
@@ -377,6 +377,7 @@ export class CityLife {
     for (let i = 0; i < N_AVE; i++) {
       for (const side of [-1, 1]) {
         const lat = side * (AVE_HALF - 0.35);
+        const d = aveDir(i);
         let prev = null;
         for (let a = TIP_END + 4; a < AVE_END - 4; a += 22 + R() * 6) {
           const p = avePoint(i, a, lat);
@@ -392,7 +393,8 @@ export class CityLife {
                 const o = (w - 1.5) * 0.18 * side;
                 const x0 = prev.x + (p.x - prev.x) * t0, z0 = prev.z + (p.z - prev.z) * t0;
                 const x1 = prev.x + (p.x - prev.x) * t1, z1 = prev.z + (p.z - prev.z) * t1;
-                pts.push(x0 + o * 0, y0, z0, x1, y1, z1);
+                const ox = -d.z * o, oz = d.x * o; // spread the 4 wires sideways (offset was multiplied by 0)
+                pts.push(x0 + ox, y0, z0 + oz, x1 + ox, y1, z1 + oz);
               }
             }
             // cross-street drop to the other side every other span
@@ -489,7 +491,8 @@ export class CityLife {
       const txt = w.startsWith('#') ? w : '# ' + w;
       g.shadowColor = 'rgba(80,220,255,0.9)'; g.shadowBlur = 16;
       g.fillStyle = '#ffffff';
-      let fs = 52; while (g.measureText(txt).width > 480 && fs > 20) { fs -= 4; g.font = `900 ${fs}px "Noto Sans JP", sans-serif`; }
+      let fs = 52; g.font = `900 ${fs}px "Noto Sans JP", sans-serif`;
+      while (g.measureText(txt).width > 480 && fs > 20) { fs -= 4; g.font = `900 ${fs}px "Noto Sans JP", sans-serif`; }
       g.fillText(txt, x + 16, y + rowH / 2);
       g.shadowBlur = 0;
     });
