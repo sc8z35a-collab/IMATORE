@@ -19,6 +19,11 @@ class PropSet {
     for (const p of this.parts) {
       const im = new THREE.InstancedMesh(p.geo, p.mat, n);
       this.mats.forEach((m, i) => im.setMatrixAt(i, m));
+      if (p.tint) { // per-instance colour variation (e.g. leaves: slight hue/value spread)
+        const c = new THREE.Color(), T = rng(n * 7 + 3);
+        for (let i = 0; i < n; i++) { c.setHSL(p.tint[0] + (T() - 0.5) * p.tint[1], 0.25 + T() * 0.2, 0.5 + (T() - 0.5) * p.tint[2]); im.setColorAt(i, c); }
+        im.instanceColor.needsUpdate = true;
+      }
       im.castShadow = this.cast && !p.noShadow;
       im.receiveShadow = !p.noShadow;
       im.name = this.name;
@@ -103,7 +108,7 @@ function makeTree() {
   const leafGeo = mergeGeometries(cards);
   const leafMat = new THREE.MeshStandardMaterial({
     map: leafTexture(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.78, metalness: 0,
-    color: 0x9fb8a0, envMapIntensity: 0.4, alphaToCoverage: true,
+    color: 0xb4c8b8, envMapIntensity: 0.3, alphaToCoverage: true,
   });
   const barkMat = new THREE.MeshStandardMaterial({ color: 0x3a3029, roughness: 0.92, envMapIntensity: 0.3 });
   _tree = { trunkGeo, leafGeo, leafMat, barkMat };
@@ -170,7 +175,7 @@ export class Props {
     const grate = new THREE.BoxGeometry(1.4, 0.04, 1.4); grate.translate(0, 0.02, 0);
     const trees = new PropSet('trees', [
       { geo: trunkGeo, mat: barkMat },
-      { geo: leafGeo, mat: leafMat },
+      { geo: leafGeo, mat: leafMat, tint: [0.3, 0.08, 0.22] },
       { geo: grate, mat: M.metalDark, noShadow: true },
     ]);
 
