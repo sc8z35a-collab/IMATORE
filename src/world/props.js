@@ -262,16 +262,16 @@ export class Props {
     const c = document.createElement('canvas'); c.width = c.height = 128;
     const g = c.getContext('2d');
     const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.3, 'rgba(255,255,255,0.45)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.18, 'rgba(255,255,255,0.62)'); grd.addColorStop(0.45, 'rgba(255,255,255,0.2)'); grd.addColorStop(0.75, 'rgba(255,255,255,0.05)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
     const tex = new THREE.CanvasTexture(c);
     const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, fog: true });
     const all = [];
-    for (const h of this.lampHeads) all.push({ x: h.x, z: h.z, s: 9, c: new THREE.Color(0xffe2b8).multiplyScalar(0.55) });
+    for (const h of this.lampHeads) all.push({ x: h.x, z: h.z, s: 7.5, c: new THREE.Color(0xffd6a0).multiplyScalar(0.26) });
     const pal = [0xff2a6d, 0x05d9e8, 0xffe14f, 0x7cff4f, 0xff9f1c, 0xb36bff, 0xffffff, 0xff4fd8];
-    for (const s of city.spill) all.push({ x: s.x, z: s.z, s: s.size, c: new THREE.Color(pal[s.color % pal.length]).multiplyScalar(0.3) });
-    for (const v of this.vmSpots || []) all.push({ x: v.x, z: v.z, s: 4, c: new THREE.Color(0xdfe8ff).multiplyScalar(0.5) });
+    for (const s of city.spill) all.push({ x: s.x, z: s.z, s: s.size * 0.85, c: new THREE.Color(pal[s.color % pal.length]).multiplyScalar(0.22) });
+    for (const v of this.vmSpots || []) all.push({ x: v.x, z: v.z, s: 3.6, c: new THREE.Color(0xdfe8ff).multiplyScalar(0.3) });
     const im = new THREE.InstancedMesh(geo, mat, all.length);
     all.forEach((p, k) => {
       im.setMatrixAt(k, new THREE.Matrix4().compose(new THREE.Vector3(p.x, CURB + 0.02, p.z), new THREE.Quaternion(), new THREE.Vector3(p.s, 1, p.s)));

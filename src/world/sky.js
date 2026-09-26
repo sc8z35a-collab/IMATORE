@@ -17,7 +17,7 @@ export class Sky {
 
   build() {
     const scene = this.scene;
-    scene.fog = new THREE.FogExp2(0x0b0f1c, 0.0068);
+    scene.fog = new THREE.FogExp2(0x0a0d18, 0.0052);
     scene.background = new THREE.Color(0x05070d);
 
     // ---- HDR env map (reflections only, background stays procedural) ----
