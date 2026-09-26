@@ -10,7 +10,7 @@ import { Kiosks } from './world/kiosks.js';
 import { Props } from './world/props.js';
 import { CityLife } from './world/life.js';
 import { Controls } from './controls.js';
-import { QA_OFF } from './util/qa.js';
+import { QA_OFF, asset } from './util/qa.js';
 import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, kioskPose } from './world/layout.js';
 import { DISTRICTS, TOP_NOW, TICKER, AS_OF, X_TRENDS } from './data/trends.js';
 
@@ -194,7 +194,7 @@ async function boot() {
     const img = it.img || d.img;
     const src = it.src ? `<div class="d-src">出典: ${it.src}</div>` : '';
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('${img}')"></div>
+      <div class="d-hero" style="background-image:url('${asset(img)}')"></div>
       <span class="d-tag" style="background:${d.color}">${d.name}</span>
       <div class="d-title">${it.title}</div>
       <div class="d-date">${it.date} ・ ${d.jp}</div>
@@ -212,7 +212,7 @@ async function boot() {
     const d = DISTRICTS[di];
     const sorted = d.items.map((x, k) => [x, k]).sort((a, b) => b[0].heat - a[0].heat);
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('${d.img}')"></div>
+      <div class="d-hero" style="background-image:url('${asset(d.img)}')"></div>
       <span class="d-tag" style="background:${d.color}">${d.name}</span>
       <div class="d-title">${d.jp} ／ ${d.tagline}</div>
       <div class="d-date">${d.items.length} TRENDS ・ ${AS_OF}</div>
@@ -226,7 +226,7 @@ async function boot() {
   function openTop() {
     const catToD = { ent: 'music', sports: 'sports', world: 'world', tech: 'tech', life: 'life', games: 'games', anime: 'anime', news: 'news' };
     $('detail-body').innerHTML = `
-      <div class="d-hero" style="background-image:url('/img/moon_skyline.jpg')"></div>
+      <div class="d-hero" style="background-image:url('${asset('/img/moon_skyline.jpg')}')"></div>
       <span class="d-tag" style="background:#27e0ff">TOP NOW</span>
       <div class="d-title">いま一番アツいトレンド</div>
       <div class="d-date">${AS_OF}</div>
@@ -262,10 +262,10 @@ async function boot() {
 
   function buildGuide() {
     const root = $('guide-list');
-    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:url('/img/moon_skyline.jpg')"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW</small></div></div>` +
+    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:url('${asset('/img/moon_skyline.jpg')}')"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW</small></div></div>` +
       DISTRICTS.map((d, i) => {
         const top = [...d.items].sort((a, b) => b.heat - a.heat)[0];
-        return `<div class="g-item" data-i="${i}" style="background-image:url('${d.img}')"><i style="background:${d.color}"></i><div><b style="color:${d.color}">${d.name}</b><small>${top.title}</small></div></div>`;
+        return `<div class="g-item" data-i="${i}" style="background-image:url('${asset(d.img)}')"><i style="background:${d.color}"></i><div><b style="color:${d.color}">${d.name}</b><small>${top.title}</small></div></div>`;
       }).join('');
     root.querySelectorAll('.g-item').forEach((el) => el.addEventListener('click', () => {
       $('guide').classList.add('hidden');

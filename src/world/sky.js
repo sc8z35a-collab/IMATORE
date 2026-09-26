@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { QA, imgPath } from '../util/qa.js';
+import { QA, imgPath, asset } from '../util/qa.js';
 
 // Night sky: procedural cloud dome lit by city glow, the (almost) harvest moon with NASA albedo,
 // stars, HDR environment for reflections, rain streaks, and the global light rig.
@@ -22,7 +22,7 @@ export class Sky {
 
     // ---- HDR env map (reflections only, background stays procedural) ----
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load('/hdr/night.hdr', (hdr) => {
+    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load(asset('/hdr/night.hdr'), (hdr) => {
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       const env = pmrem.fromEquirectangular(hdr).texture;
       scene.environment = env;
