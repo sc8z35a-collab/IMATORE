@@ -12,8 +12,8 @@ import {
 
 const PED_PER_AVE = 150;
 const HUB_PEDS = 140;
-const CARS_RING = 26;
-const CARS_AVE = 7;
+const CARS_RING = 30;
+const CARS_AVE = 0; // avenues are pedestrian-only (歩行者天国) — kiosks stand in the carriageway
 
 // ---------- pedestrians ----------
 // Each instance has: aPath (x0,z0,x1,z1), aParam (speed, phase, height, umbrella?), aColor
@@ -96,8 +96,8 @@ const pedFS = /* glsl */ `
     float up = N.y * 0.5 + 0.5;
     vec3 amb = mix(vec3(0.05, 0.04, 0.06), vec3(0.09, 0.11, 0.18), up);
     float rim = pow(1.0 - max(dot(N, V), 0.0), 2.5);
-    vec3 rimC = mix(vec3(1.0, 0.35, 0.85), vec3(0.2, 0.85, 1.0), fract(vW.x * 0.013 + vW.z * 0.011)) * 0.55;
-    vec3 col = vCol * (amb * 2.4 + 0.05) + rimC * rim;
+    vec3 rimC = mix(vec3(1.0, 0.55, 0.8), vec3(0.45, 0.8, 1.0), fract(vW.x * 0.013 + vW.z * 0.011)) * 0.22;
+    vec3 col = vCol * (amb * 1.6 + 0.035) + rimC * rim;
     if (vPart > 8.5) { // umbrella: translucent-ish, catches light
       col = vCol * 0.28 + rimC * rim * 1.2 + vec3(0.02);
     }
@@ -189,7 +189,7 @@ const lampFS = /* glsl */ `
   uniform vec3 uCam; uniform float uFogDensity;
   varying vec3 vCol; varying vec3 vN; varying vec3 vW; varying float vPart;
   void main(){
-    vec3 col = vPart < 0.5 ? vec3(6.0, 5.6, 4.8) : vec3(5.0, 0.25, 0.15);
+    vec3 col = vPart < 0.5 ? vec3(2.4, 2.25, 2.0) : vec3(2.2, 0.12, 0.08);
     float d = length(uCam - vW);
     float f = exp(-uFogDensity * uFogDensity * d * d * 0.5);
     gl_FragColor = vec4(col * f, 1.0);
@@ -233,13 +233,18 @@ export class CityLife {
     const R = this.R;
     const paths = [];
     // sidewalk lanes along each avenue (both sides) + a few crossing the pedestrian street
+    // lanes chosen to avoid street furniture (see layout.js / props.js):
+    //   kiosks |s| 1.15..3.05, bollards 4.8, lamps 5.05, trees 6.1 (r .45), benches 7.3, vending 8.05, poles 8.15
+    const LANES = [[-0.7, 0.7], [3.35, 4.2], [-4.2, -3.35], [5.3, 5.55], [-5.55, -5.3]];
+    const LANE_W = [0.3, 0.2, 0.2, 0.15, 0.15];
     for (let i = 0; i < N_AVE; i++) {
       for (let k = 0; k < PED_PER_AVE; k++) {
-        const side = R() < 0.5 ? -1 : 1;
-        const lane = ROAD_HALF + 0.7 + R() * (AVE_HALF - ROAD_HALF - 1.6);
+        let r = R(), li = 0; while (li < LANES.length - 1 && r > LANE_W[li]) { r -= LANE_W[li]; li++; }
+        const [l0, l1] = LANES[li];
+        const lat = l0 + R() * (l1 - l0);
         const a0 = PLAZA_R + 2 + R() * (AVE_END - PLAZA_R - 30);
         const len = 14 + R() * 40;
-        const A = avePoint(i, a0, side * lane), B = avePoint(i, Math.min(AVE_END - 8, a0 + len), side * (lane + (R() - 0.5) * 0.8));
+        const A = avePoint(i, a0, lat), B = avePoint(i, Math.min(AVE_END - 8, a0 + len), lat);
         paths.push([A, B]);
       }
     }
@@ -275,12 +280,12 @@ export class CityLife {
   buildTraffic() {
     const R = this.R;
     const cars = [];
-    // ring road: two lanes, counter-clockwise (Japan drives on the left => CCW seen from above is clockwise?).
-    // Our ring is traversed in +a direction for the outer lane and -a for the inner lane.
+    // ring road: two lanes, both clockwise seen from above (Japanese roundabouts; +a is clockwise with +z = south).
+    // cars are evenly phased so they never overlap within a lane.
     for (let k = 0; k < CARS_RING; k++) {
       const outer = k % 2 === 0;
       const r = outer ? RING_OUT - 2.2 : RING_IN + 2.2;
-      cars.push({ kind: 0, path: [r, 0, 0, 0], spd: 6 + R() * 5, ph: R() * Math.PI * 2, dir: outer ? 1 : -1 });
+      cars.push({ kind: 0, path: [r, 0, 0, 0], spd: outer ? 7 + R() * 3 : 5 + R() * 3, ph: (k / CARS_RING) * Math.PI * 2 + R() * 0.12, dir: 1 });
     }
     // avenues: one lane each way, keep left
     for (let i = 0; i < N_AVE; i++) {

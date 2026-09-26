@@ -99,7 +99,7 @@ export class Props {
     for (let k = 0; k < lp.count; k++) lp.setXYZ(k, lp.getX(k) + (LR() - 0.5) * 0.25, lp.getY(k) + (LR() - 0.5) * 0.25, lp.getZ(k) + (LR() - 0.5) * 0.25);
     leafGeo.computeVertexNormals();
     const grate = new THREE.BoxGeometry(1.4, 0.04, 1.4); grate.translate(0, 0.02, 0);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x1d3a22, roughness: 0.85, flatShading: true });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x14261a, roughness: 0.9, flatShading: true, envMapIntensity: 0.35 });
     const trees = new PropSet('trees', [
       { geo: trunk, mat: new THREE.MeshStandardMaterial({ color: 0x2b2420, roughness: 0.95 }) },
       { geo: leafGeo, mat: leafMat },

@@ -5,7 +5,7 @@ export const texPath = (p) => (QA && p.startsWith('/tex/') && !p.startsWith('/te
 
 // QA: canvases are allocated at reduced resolution; width/height are shadowed with the logical size
 // so all drawing code stays unchanged (a scale transform maps logical -> backing pixels).
-export const QA_CANVAS = QA ? 0.3 : 1;
+export const QA_CANVAS = QA && !new URLSearchParams(location.search).has('fullcanvas') ? 0.3 : 1;
 export function makeCanvas(w, h) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;

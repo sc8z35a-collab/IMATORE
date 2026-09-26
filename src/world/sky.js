@@ -26,7 +26,8 @@ export class Sky {
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       const env = pmrem.fromEquirectangular(hdr).texture;
       scene.environment = env;
-      scene.environmentIntensity = 0.55;
+      scene.environmentIntensity = 0.18;
+      scene.environmentRotation.set(0, 1.2, 0);
       hdr.dispose();
       pmrem.dispose();
     });
