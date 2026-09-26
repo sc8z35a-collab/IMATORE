@@ -44,7 +44,7 @@ export class Props {
     const head = new THREE.BoxGeometry(0.34, 0.1, 0.7); head.translate(0, 6.96, 1.45);
     const lens = new THREE.PlaneGeometry(0.28, 0.6); lens.rotateX(Math.PI / 2); lens.translate(0, 6.905, 1.45);
     const lampBody = mergeGeometries([pole, arm, head]);
-    const lamps = new PropSet('lamps', [{ geo: lampBody, mat: M.metalDark }, { geo: lens, mat: glow(0xfff1d6, 9), noShadow: true }]);
+    const lamps = new PropSet('lamps', [{ geo: lampBody, mat: M.metalDark }, { geo: lens, mat: glow(0xfff1d6, 4.2), noShadow: true }]);
 
     // ---- traffic signal (Japanese horizontal LED) ----
     const tpole = new THREE.CylinderGeometry(0.09, 0.11, 5.6, 10); tpole.translate(0, 2.8, 0);

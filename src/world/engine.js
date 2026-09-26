@@ -80,6 +80,8 @@ export class Engine {
     // so the threshold must be well above that or the whole frame turns milky. Only lamps, LED trims,
     // headlights and the tower (>2.2) should bloom, with a tight radius.
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.22, 2.2);
+    // weight the tight mips: crisp halos around emitters instead of a frame-wide veil from the 1/32 mip
+    this.bloom.compositeMaterial.uniforms.bloomFactors.value = [1.0, 0.7, 0.35, 0.12, 0.04];
     if (!QA_OFF.bloom) this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.final = new ShaderPass(FinalShader);
