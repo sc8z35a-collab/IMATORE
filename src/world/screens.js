@@ -86,6 +86,7 @@ export class Channel {
 
   drawCover(im, x, y, w, h, zoom = 1, panX = 0, panY = 0) {
     const g = this.g;
+    if (!im.naturalWidth || !im.naturalHeight) return;
     const ia = im.naturalWidth / im.naturalHeight, a = w / h;
     let sw, sh;
     if (ia > a) { sh = im.naturalHeight; sw = sh * a; } else { sw = im.naturalWidth; sh = sw / a; }
@@ -102,6 +103,7 @@ export class Channel {
     const idx = Math.floor(lt / this.slideLen);
     const p = (lt % this.slideLen) / this.slideLen;
     const items = d.items;
+    if (!items.length) return;
     const mode = idx % 3;
     g.save();
     g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
@@ -139,7 +141,8 @@ export class Channel {
       g.font = `900 ${fs}px ${JP}`;
       const lines = wrapText(g, item.title, W - (port ? 80 : 110)).slice(0, port ? 5 : 3);
       const reveal = Math.min(1, p * 3.2);
-      let chars = Math.floor(reveal * item.title.length);
+      // count against the visible (possibly truncated) lines, not the full title
+      let chars = Math.floor(reveal * lines.reduce((n, l) => n + l.length, 0));
       g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 16;
       const baseY = H - (port ? 330 : 200) - (lines.length - 1) * fs * 1.12;
       lines.forEach((l, k) => {
@@ -156,7 +159,7 @@ export class Channel {
       g.fillStyle = 'rgba(255,255,255,.18)';
       g.fillRect(0, H - 12, W, 12);
       g.fillStyle = d.color;
-      g.fillRect(0, H - 12, W * (item.heat / 100) * Math.min(1, p * 2), 12);
+      g.fillRect(0, H - 12, W * (Math.max(0, Math.min(100, item.heat)) / 100) * Math.min(1, p * 2), 12);
     } else {
       // ranking board
       const gr = g.createLinearGradient(0, 0, 0, H);
@@ -188,8 +191,10 @@ export class Channel {
         g.font = `700 ${port ? 38 : 36}px ${JP}`;
         let tt = it.title;
         const mw = W - (port ? 220 : 360);
-        while (g.measureText(tt).width > mw && tt.length > 2) tt = tt.slice(0, -1);
-        if (tt !== it.title) tt = tt.slice(0, -1) + '…';
+        if (g.measureText(tt).width > mw) {
+          while (g.measureText(tt + '…').width > mw && tt.length > 1) tt = tt.slice(0, -1);
+          tt += '…';
+        }
         g.fillText(tt, 160, y + (rowH - 16) / 2 - (port ? 12 : 0));
         if (port) {
           g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(160, y + rowH - 44, W - 220, 8);
@@ -224,7 +229,7 @@ export class Channel {
       this.bandText = [d.name + ' ／ ' + d.jp, ...d.items.map((i) => i.title)].join('　◆　') + '　◆　';
       this.bandW = g.measureText(this.bandText).width;
     }
-    const x = -((t * 180 + this.scroll) % this.bandW);
+    const x = -((t * 180 + this.scroll) % Math.max(1, this.bandW));
     g.fillStyle = d.color;
     g.fillText(this.bandText, x, H / 2 + 2);
     g.fillText(this.bandText, x + this.bandW, H / 2 + 2);
@@ -248,7 +253,9 @@ export class ScreenSystem {
     const load = (url) => {
       if (!url) return null;
       if (cache.has(url)) return cache.get(url);
-      const im = new Image(); im.decoding = 'async'; im.src = imgPath(url); cache.set(url, im); return im;
+      const im = new Image(); im.decoding = 'async';
+      im.onerror = () => console.warn('image failed:', url);
+      im.src = imgPath(url); cache.set(url, im); return im;
     };
     this.districts.forEach((d) => {
       d.imgEls = [d.img, ...(d.gallery || [])].map(load).filter(Boolean);
@@ -290,7 +297,8 @@ export class ScreenSystem {
   update(t, dt, camPos) {
     this.time = t;
     const n = this.channels.length;
-    const perFrame = 3;
+    if (!n) return;
+    const perFrame = Math.min(3, n);
     for (let k = 0; k < perFrame; k++) {
       const c = this.channels[this.cursor % n];
       this.cursor++;
