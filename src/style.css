@@ -177,5 +177,5 @@ body.sheet-open #prompt, body.sheet-open #crosshair, body.sheet-open #minimap, b
 .d-row[data-d], .d-row[data-top], .g-item { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   #ticker-in { animation-duration: 200s; }
-  .ld-btn:not(:disabled), .rot-phone { animation: none; }
+  .ld-btn:not(:disabled), .rot-phone, .sheet { animation: none !important; }
 }

@@ -9,7 +9,7 @@ UA = 'Mozilla/5.0 (Linux; Android 16; SM-S938B) AppleWebKit/537.36 (KHTML, like 
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(args=ARGS)
-        ctx = await b.new_context(viewport={'width': 915, 'height': 412}, is_mobile=True, has_touch=True, user_agent=UA)
+        ctx = await b.new_context(viewport={'width': 915, 'height': 412}, is_mobile=True, has_touch=True, user_agent=UA, reduced_motion='reduce')
         pg = await ctx.new_page()
         errs, bad, logs = [], [], []
         pg.on('pageerror', lambda e: errs.append(str(e)))
