@@ -88,33 +88,42 @@ export class Engine {
     this.final = new ShaderPass(FinalShader);
     this.composer.addPass(this.final);
 
-    this.clock = new THREE.Clock();
     this.frameTimes = [];
     this.lastQualityCheck = 0;
     this.onResize = this.onResize.bind(this);
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', () => setTimeout(this.onResize, 250));
+    // mobile browsers resize the visual viewport (URL bar) without always firing window.resize
+    window.visualViewport?.addEventListener('resize', this.onResize);
+    // GPU context loss (backgrounded tab on low-memory phones): keep the page alive and restore
+    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; }, false);
+    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.onResize(); }, false);
     this.onResize();
   }
 
   onResize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
+    if (w === this._w && h === this._h && this.dpr === this._dpr) return;
+    this._w = w; this._h = h; this._dpr = this.dpr;
     this.camera.aspect = w / h;
-    // wider vertical FOV in portrait so the city doesn't feel cramped
-    this.camera.fov = w < h ? 78 : 64;
+    // wider vertical FOV in portrait so the city doesn't feel cramped. Controls lerp toward
+    // userData.baseFov (zoom / run / warp), so both must be set.
+    const fov = w < h ? 78 : 64;
+    this.camera.userData.baseFov = fov;
+    this.camera.fov = fov;
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this.dpr);
     this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(this.dpr);
     this.composer.setSize(w, h);
-    this.bloom.resolution.set(w * 0.5, h * 0.5);
+
     this.final.uniforms.uRes.value.set(w * this.dpr, h * this.dpr);
     this.resizeHooks?.forEach((f) => f(w, h, this.dpr));
   }
 
   // dynamic resolution to keep motion fluid
   adapt(dt, now) {
-    if (QA) return;
+    if (QA || document.hidden) return;
     this.frameTimes.push(dt);
     if (this.frameTimes.length > 90) this.frameTimes.shift();
     if (now - this.lastQualityCheck < 2.5 || this.frameTimes.length < 60) return;
@@ -122,8 +131,10 @@ export class Engine {
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
     const fps = 1 / avg;
     let next = this.dpr;
-    if (fps < 38 && this.dpr > 1.0) next = Math.max(1.0, this.dpr - 0.25);
-    else if (fps > 57 && this.dpr < Math.min(this.maxDpr, 2.5)) next = Math.min(this.maxDpr, this.dpr + 0.25);
+    // floor 0.75 so weak GPUs on 1x screens can still recover; ceiling = the initial cap (2.25)
+    const floor = Math.min(1.0, this.maxDpr) * 0.75, ceil = Math.min(this.maxDpr, 2.25);
+    if (fps < 38 && this.dpr > floor) next = Math.max(floor, this.dpr - 0.25);
+    else if (fps > 57 && this.dpr < ceil) next = Math.min(ceil, this.dpr + 0.25);
     if (next !== this.dpr) {
       this.dpr = next;
       this.onResize();
@@ -132,6 +143,7 @@ export class Engine {
   }
 
   render(t) {
+    if (this.lost) return;
     this.final.uniforms.uTime.value = t;
     this.composer.render();
   }
