@@ -151,6 +151,10 @@ const pedFS = /* glsl */ `
       col = vCol * (0.18 + 0.35 * max(N.y, 0.0)) + rimC * rim * 1.6 + vec3(0.02);
     }
     float d = length(uCam - vW);
+    // screen-door fade for walkers passing through / right in front of the camera
+    float near = smoothstep(0.55, 1.5, d);
+    float bayer = fract(dot(floor(gl_FragCoord.xy), vec2(0.5, 0.25)) + fract(floor(gl_FragCoord.y * 0.5) * 0.5) * 0.5);
+    if (near < 0.999 && bayer > near) discard;
     float f = 1.0 - exp(-uFogDensity * uFogDensity * d * d);
     gl_FragColor = vec4(mix(col, uFogColor, f), 1.0);
     #include <tonemapping_fragment>
