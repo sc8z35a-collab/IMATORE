@@ -97,13 +97,13 @@ export class Engine {
     window.visualViewport?.addEventListener('resize', this.onResize);
     // GPU context loss (backgrounded tab on low-memory phones): keep the page alive and restore
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; }, false);
-    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.onResize(); }, false);
+    canvas.addEventListener('webglcontextrestored', () => { this.lost = false; this.onResize(true); }, false);
     this.onResize();
   }
 
-  onResize() {
+  onResize(force) {
     const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
-    if (w === this._w && h === this._h && this.dpr === this._dpr) return;
+    if (force !== true && w === this._w && h === this._h && this.dpr === this._dpr) return;
     this._w = w; this._h = h; this._dpr = this.dpr;
     this.camera.aspect = w / h;
     // wider vertical FOV in portrait so the city doesn't feel cramped. Controls lerp toward

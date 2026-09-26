@@ -54,7 +54,7 @@ async function boot() {
   setMsg('夜空と月を生成中…'); setProg(0.05); await tick();
   const refl = new GroundReflection(renderer, 0.5);
   engine.resizeHooks = [(w, h, dpr) => refl.setSize(w, h, Math.min(dpr, 1.5))];
-  engine.onResize();
+  engine.onResize(true);
   const sky = new Sky(scene, renderer, manager); sky.build();
 
   setMsg('街路を敷設中…'); setProg(0.1); await tick();
