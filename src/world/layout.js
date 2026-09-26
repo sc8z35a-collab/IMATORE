@@ -52,6 +52,7 @@ export const obstacles = [];
 export function addObstacle(x, z, r) { obstacles.push({ x, z, r }); }
 
 export function isWalkable(x, z, pad = 0.3) {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
   const r = Math.hypot(x, z);
   let ok = false;
   if (r < PLAZA_R - 0.8 - pad) ok = r > 6.2 + pad;

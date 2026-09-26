@@ -47,7 +47,7 @@ export class GroundReflection {
     cam.lookAt(this._t);
     cam.far = camera.far;
     cam.near = camera.near;
-    cam.fov = camera.fov; cam.aspect = camera.aspect;
+    cam.fov = camera.fov; cam.aspect = camera.aspect; cam.zoom = camera.zoom; cam.layers.mask = camera.layers.mask;
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
 
@@ -76,14 +76,18 @@ export class GroundReflection {
     const prevRT = r.getRenderTarget();
     const prevShadow = r.shadowMap.autoUpdate;
     // first frame: let the shadow map be generated here, otherwise shadow samplers bind a non-depth dummy texture
-    if (this._n = (this._n || 0) + 1, this._n > 2) r.shadowMap.autoUpdate = false;
-    r.setRenderTarget(this.rt);
-    r.clear();
-    r.render(scene, cam);
-    r.setRenderTarget(prevRT);
-    r.shadowMap.autoUpdate = prevShadow;
-    for (const o of this.hide) o.visible = true;
-    for (const o of this._self) o.visible = true;
+    this._n = (this._n || 0) + 1;
+    if (this._n > 2) r.shadowMap.autoUpdate = false;
+    try {
+      r.setRenderTarget(this.rt);
+      r.clear();
+      r.render(scene, cam);
+    } finally {
+      r.setRenderTarget(prevRT);
+      r.shadowMap.autoUpdate = prevShadow;
+      for (const o of this.hide) o.visible = true;
+      for (const o of this._self) o.visible = true;
+    }
   }
 
   // inject into a MeshStandardMaterial / MeshPhysicalMaterial
