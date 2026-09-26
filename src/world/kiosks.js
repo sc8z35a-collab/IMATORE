@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { makeCanvas } from '../util/qa.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { kioskTexture, bannerTexture, towerTexture, LedStrip } from './textures.js';
 import { kioskPose, addObstacle, avePoint, aveDir, PLAZA_R, ROAD_HALF, AVE_HALF, CURB, N_AVE, HUB_R } from './layout.js';
 import { glow } from './materials.js';
@@ -23,9 +24,12 @@ export class Kiosks {
     const base = new RoundedBoxGeometry(1.9, 0.28, 0.6, 3, 0.05);
     base.translate(0, 0.14, 0);
     const screenGeo = new THREE.PlaneGeometry(1.5, 2.25);
-    const topCap = new THREE.BoxGeometry(1.74, 0.05, 0.4);
+    const trimParts = [];
+    for (const sx of [-0.84, 0.84]) for (const sz of [-0.182, 0.182]) { const e = new THREE.BoxGeometry(0.022, 3.0, 0.022); e.translate(sx, 1.93, sz); trimParts.push(e); }
+    for (const sz of [-0.182, 0.182]) { const c = new THREE.BoxGeometry(1.66, 0.022, 0.022); c.translate(0, 3.43, sz); trimParts.push(c); }
+    const trimGeo = mergeGeometries(trimParts, false);
     this.districts.forEach((d, i) => {
-      const edge = glow(d.color, 1.8);
+      const edge = glow(d.color, 2.6);
       d.items.forEach((item, k) => {
         const p = kioskPose(i, k);
         const g = new THREE.Group();
@@ -45,11 +49,8 @@ export class Kiosks {
         back.position.set(0, 2.05, -0.185); back.rotation.y = Math.PI;
         g.add(back);
         // light edges
-        for (const sx of [-0.86, 0.86]) {
-          const e = new THREE.Mesh(new THREE.BoxGeometry(0.03, 3.1, 0.3), edge);
-          e.position.set(sx, 1.93, 0); g.add(e);
-        }
-        const cap = new THREE.Mesh(topCap, edge); cap.position.y = 3.58; g.add(cap);
+        // thin LED trims on the corners + top (one merged mesh per kiosk)
+        g.add(new THREE.Mesh(trimGeo, edge));
         // floor glow decal
         const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), this.poolMat(d.color));
         pool.rotation.x = -Math.PI / 2; pool.position.y = 0.015;

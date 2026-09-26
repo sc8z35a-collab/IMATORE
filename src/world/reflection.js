@@ -132,7 +132,7 @@ export class GroundReflection {
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
           float pud = smoothstep(0.52 - uPuddle*0.25, 0.62 - uPuddle*0.25, fbm(vWPos.xz*0.09 + 3.1) * 0.75 + fbm(vWPos.xz*0.6)*0.25);
           float wetK = clamp(uWet*0.55 + pud, 0.0, 1.0);
-          roughnessFactor = mix(roughnessFactor, 0.04, wetK);`)
+          roughnessFactor = mix(roughnessFactor, mix(0.32, 0.06, pud), wetK);`)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
           normal = normalize(mix(normal, vec3(0.0,0.0,1.0) * sign(normal.z + 1e-4) , pud*0.85));`)
         .replace('#include <opaque_fragment>', `
@@ -149,7 +149,7 @@ export class GroundReflection {
             vec3 V = normalize(cameraPosition - vWPos);
             float fres = 0.04 + 0.96 * pow(1.0 - clamp(V.y, 0.0, 1.0), 5.0);
             float k = wetK * mix(0.35, 1.0, fres);
-            outgoingLight = mix(outgoingLight, outgoingLight*0.35, wetK*0.6) + refl * uTint * k;
+            outgoingLight = mix(outgoingLight, outgoingLight*0.3, wetK*0.7) + refl * uTint * k * 1.15;
           }
           #include <opaque_fragment>`);
     };
