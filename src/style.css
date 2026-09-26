@@ -93,8 +93,8 @@ body.desktop .ld-desk { display: block; }
   border-top: 1px solid rgba(160,220,255,.35); backdrop-filter: blur(22px) saturate(1.3); -webkit-backdrop-filter: blur(22px) saturate(1.3);
   touch-action: pan-y; animation: up .35s cubic-bezier(.2,.9,.2,1); }
 @keyframes up { from { transform: translateY(100%); } }
-.sheet .x { position: absolute; right: 12px; top: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
-  background: rgba(255,255,255,.06); color: #fff; font-size: 20px; }
+.sheet .x { position: absolute; z-index: 3; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); right: 12px; top: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(6,8,18,.62); color: #fff; font-size: 20px; line-height: 1; }
 .sheet-h { display: flex; flex-direction: column; margin-bottom: 12px; }
 .sheet-h b { font-family: Orbitron; letter-spacing: .25em; font-size: 14px; }
 .sheet-h span { font-size: 11px; opacity: .6; margin-top: 4px; }
@@ -103,7 +103,8 @@ body.desktop .ld-desk { display: block; }
 .g-item::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.75)); }
 .g-item div { position: absolute; left: 10px; bottom: 8px; z-index: 1; }
 .g-item b { display: block; font-family: Orbitron; font-size: 12px; letter-spacing: .1em; }
-.g-item small { font-size: 10px; opacity: .8; }
+.g-item div { right: 10px; }
+.g-item small { display: block; font-size: 10px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-item i { position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 1; }
 .g-plaza { grid-column: span 2; height: 64px; }
 .credits { margin-top: 16px; font-size: 9px; opacity: .45; line-height: 1.6; }
@@ -161,3 +162,7 @@ body.desktop .ld-desk { display: block; }
   #guide-list { grid-template-columns: 1fr 1fr; }
   .g-item { height: 78px; }
 }
+
+/* hide world HUD that would collide with an open side sheet */
+body.sheet-open #prompt, body.sheet-open #crosshair, body.sheet-open #minimap, body.sheet-open .hud-btns, body.sheet-open .clock { opacity: 0; pointer-events: none !important; }
+#minimap, .hud-btns, .clock, #crosshair { transition: opacity .2s; }

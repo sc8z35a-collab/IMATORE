@@ -323,6 +323,9 @@ async function boot() {
   let lastZone = '';
   let promptHit = null;
   function updatePrompt() {
+    const so = sheetOpen();
+    document.body.classList.toggle('sheet-open', so);
+    if (so) { $('prompt').classList.add('hidden'); promptHit = null; $('crosshair').classList.remove('hot'); return; }
     ray.setFromCamera(center, camera);
     const hit = ray.intersectObjects(pickables, false)[0];
     const pr = $('prompt');

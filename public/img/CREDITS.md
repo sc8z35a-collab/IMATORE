@@ -32,3 +32,4 @@
 - skate_bowl.jpg — PxHere (CC0) https://pxhere.com/en/photo/998119
 - skatepark_pd.jpg — Public Domain Pictures (PD) https://www.publicdomainpictures.net/en/view-image.php?image=437660&picture=skatepark
 - moon_aoto.jpg — "Super Harvest Moon at Aoto, Katsushika-ku" Yoshikazu TAKADA, Flickr (CC BY) https://www.flickr.com/photos/yoshikazut/21565469910
+- marathon.jpg — PxHere (CC0) https://pxhere.com/en/photo/1534877 (generic marathon image; not the athlete in the article)
