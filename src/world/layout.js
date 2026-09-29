@@ -20,6 +20,11 @@ export const KIOSK_STEP = 9.6;
 export const EYE = 1.62;
 export const CURB = 0.12;
 export const TAN_HALF = Math.tan(Math.PI / N_AVE); // tan 22.5°
+// The whole hub sits on an elevated artificial ground (人工地盤) PLAT_H metres above the surrounding city.
+// Its outer rim is at along-distance EDGE on every avenue: glass-railed terraces overlook the lower city.
+export const PLAT_H = 28;
+export const EDGE = 212;
+export const TERRACE_END = EDGE - 3.2;  // walkable limit at the avenue terraces
 
 export function aveAngle(i) {
   // avenue 0 points to -Z (north) and goes clockwise seen from above
@@ -51,14 +56,18 @@ export function aveLocal(x, z) {
 export const obstacles = [];
 export function addObstacle(x, z, r) { obstacles.push({ x, z, r }); }
 
+// sky deck (rooftop observation deck): while active, the player is confined to it
+export const DECK = { active: false, x: 0, z: 0, y: 0, r: 0 };
+
 export function isWalkable(x, z, pad = 0.3) {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+  if (DECK.active) return Math.hypot(x - DECK.x, z - DECK.z) < DECK.r - pad;
   const r = Math.hypot(x, z);
   let ok = false;
   if (r < PLAZA_R - 0.8 - pad) ok = r > 6.2 + pad;
   else {
     const L = aveLocal(x, z);
-    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && L.along < AVE_END - 6;
+    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && L.along < TERRACE_END - pad;
   }
   if (!ok) return false;
   for (const o of obstacles) {
@@ -70,6 +79,7 @@ export function isWalkable(x, z, pad = 0.3) {
 
 // ground height under a point (road = 0, pavement = CURB)
 export function groundHeight(x, z) {
+  if (DECK.active) return DECK.y;
   const r = Math.hypot(x, z);
   if (r < RING_IN) return CURB;
   if (r < RING_OUT) return 0;
@@ -79,7 +89,7 @@ export function groundHeight(x, z) {
     return CURB;
   }
   const L = aveLocal(x, z);
-  if (L && Math.abs(L.lateral) < ROAD_HALF) return 0;
+  if (L && Math.abs(L.lateral) < ROAD_HALF && L.along < AVE_END) return 0;
   return CURB;
 }
 

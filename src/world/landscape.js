@@ -24,12 +24,16 @@ import { Q, LITE } from '../settings.js';
 // =====================================================================================================
 
 const TAU = Math.PI * 2;
+import { PLAT_H } from './layout.js';
+export const GY = -PLAT_H;          // lower-city ground level (the hub platform is at y≈0)
+const WY = GY - 1.2;                // water level
 // shared uniforms (time, haze, moon)
 export const LU = {
   uTime: { value: 0 },
   uHaze: { value: new THREE.Color(0.19, 0.11, 0.17) },
   uHazeDen: { value: 0.00062 },
   uMoon: { value: new THREE.Vector3(0.42, 0.36, 0.83).normalize() },
+  uPx: { value: 400 },             // pixels per radian-ish: drawingBufferHeight / (2 tan(fov/2))
 };
 
 const HAZE_GLSL = /* glsl */ `
@@ -47,7 +51,7 @@ const HAZE_GLSL = /* glsl */ `
 
 // ---------------- geography ----------------
 // The bay opens to the south-south-east, right under the moon (so the moon's glitter path lies on the water).
-export const BAY_DIR = new THREE.Vector2(0.45, 0.893).normalize();
+export const BAY_DIR = new THREE.Vector2(0.0, 1.0);
 const COAST0 = 800;
 function bayCoords(x, z) {
   const along = x * BAY_DIR.x + z * BAY_DIR.y;
@@ -100,16 +104,20 @@ const BRIDGE_ALONG = 1060, BRIDGE_HALF = 660;
 const BRIDGE_W = bayPoint(BRIDGE_ALONG, -BRIDGE_HALF), BRIDGE_E = bayPoint(BRIDGE_ALONG, BRIDGE_HALF);
 const polar = (deg, r) => ({ x: Math.cos((deg * Math.PI) / 180) * r, z: Math.sin((deg * Math.PI) / 180) * r });
 export const LANDMARKS = {
-  lattice: { ...polar(160, 640), h: 250, name: 'TOKYO TOWER' },
-  skytree: { ...polar(-38, 1500), h: 570, name: 'SKY TREE' },
+  // each landmark closes the vista of one avenue (seen under / above the giant end-gate screens)
+  lattice: { ...polar(135, 720), h: 333, name: 'TOKYO TOWER' },   // avenue 5
+  skytree: { ...polar(-45, 1500), h: 634, name: 'SKYTREE' },      // avenue 1
+  wheel: { ...polar(45, 980), h: 115, name: 'FERRIS WHEEL' },     // avenue 3
+  fuji: { ...polar(180, 5600), h: 780, name: 'MT. FUJI' },        // avenue 6
 };
 // skyscraper clusters: {deg, r, sigma, amp}
-const CLUSTERS = [
-  { deg: -150, r: 820, s: 170, amp: 190, name: '新宿' },
-  { deg: 18, r: 560, s: 120, amp: 140, name: '汐留' },
-  { deg: -112, r: 1320, s: 130, amp: 130, name: '池袋' },
-  { deg: 128, r: 720, s: 110, amp: 110, name: '渋谷' },
-  { deg: -60, r: 700, s: 110, amp: 80, name: '上野' },
+export const CLUSTERS = [
+  { deg: -135, r: 950, s: 190, amp: 200, name: '新宿' },    // avenue 7 vista
+  { deg: 62, r: 640, s: 120, amp: 150, name: '汐留' },
+  { deg: -90, r: 1400, s: 150, amp: 140, name: '池袋' },    // avenue 0 vista
+  { deg: 118, r: 760, s: 120, amp: 120, name: '渋谷' },
+  { deg: -20, r: 820, s: 130, amp: 90, name: '上野' },
+  { deg: 20, r: 1500, s: 200, amp: 110, name: '幕張' },
 ];
 for (const c of CLUSTERS) Object.assign(c, polar(c.deg, c.r));
 
@@ -131,7 +139,7 @@ export function isFree(x, z, margin = 0) {
   if (segDist(x, z, SPUR_A, BRIDGE_W) < 12 + margin) return false;
   if (segDist(x, z, BRIDGE_E, EAST_END) < 12 + margin) return false;
   if (riverDist(x, z) < 42 + margin) return false;
-  for (const k in LANDMARKS) { const l = LANDMARKS[k]; if (Math.hypot(x - l.x, z - l.z) < 70) return false; }
+  for (const k in LANDMARKS) { const l = LANDMARKS[k]; if (Math.hypot(x - l.x, z - l.z) < (k === 'wheel' ? 95 : 70)) return false; }
   return true;
 }
 
