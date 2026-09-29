@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QA, QA_DPR, QA_OFF } from '../util/qa.js';
+import { Q, SETTINGS } from '../settings.js';
 
 // Final cinematic grade: lens distortion, chromatic aberration, vignette, grain, rain-on-lens glints.
 const FinalShader = {
@@ -61,18 +62,23 @@ export class Engine {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = !QA_OFF.shadow;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = !QA_OFF.shadow && Q.shadows;
+    renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft was removed in r18x (falls back anyway)
     this.renderer = renderer;
     this.maxDpr = Math.min(window.devicePixelRatio || 1, 3);
-    this.dpr = QA ? QA_DPR : Math.min(this.maxDpr, 2.25);
+    this.dprCap = Math.min(this.maxDpr, Q.dprCap);
+    this.dpr = QA ? QA_DPR : this.dprCap;
     renderer.setPixelRatio(this.dpr);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(72, 1, 0.05, 1600);
+    this.camera = new THREE.PerspectiveCamera(72, 1, 0.1, 5200);
     this.camera.rotation.order = 'YXZ';
 
-    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : 4 });
+    // 超軽量: no composer at all — render straight to the canvas with ACES (saves 3-4 full-screen passes + MSAA RT)
+    this.post = Q.post;
+    this.final = { uniforms: { uWarp: { value: 0 }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2() } } };
+    if (!this.post) { this._initCommon(canvas); return; }
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : Q.msaa });
     this.composer = new EffectComposer(renderer, rt);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
@@ -83,10 +89,24 @@ export class Engine {
     // weight the tight mips: crisp halos around emitters instead of a frame-wide veil from the 1/32 mip
     // radius=0 -> factors are used verbatim (lerpBloomFactor mixes toward 1.2-f as radius grows)
     this.bloom.compositeMaterial.uniforms.bloomFactors.value = [1.0, 0.55, 0.22, 0.06, 0.0];
-    if (!QA_OFF.bloom) this.composer.addPass(this.bloom);
+    if (!QA_OFF.bloom && Q.bloom) this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.final = new ShaderPass(FinalShader);
     this.composer.addPass(this.final);
+    this.setLensFx(SETTINGS.fx);
+    this._initCommon(canvas);
+  }
+
+  // lens grain / chromatic aberration / vignette (user toggle)
+  setLensFx(on) {
+    if (!this.post) return;
+    const u = this.final.uniforms;
+    u.uCA.value = on ? 0.0022 : 0.0;
+    u.uGrain.value = on ? 0.045 : 0.0;
+    u.uVig.value = on ? 1.05 : 0.8;
+  }
+
+  _initCommon(canvas) {
 
     this.frameTimes = [];
     this.lastQualityCheck = 0;
@@ -114,8 +134,10 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this.dpr);
     this.renderer.setSize(w, h, false);
-    this.composer.setPixelRatio(this.dpr);
-    this.composer.setSize(w, h);
+    if (this.composer) {
+      this.composer.setPixelRatio(this.dpr);
+      this.composer.setSize(w, h);
+    }
 
     this.final.uniforms.uRes.value.set(w * this.dpr, h * this.dpr);
     this.resizeHooks?.forEach((f) => f(w, h, this.dpr));
@@ -132,9 +154,10 @@ export class Engine {
     const fps = 1 / avg;
     let next = this.dpr;
     // floor 0.75 so weak GPUs on 1x screens can still recover; ceiling = the initial cap (2.25)
-    const floor = Math.min(1.0, this.maxDpr) * 0.75, ceil = Math.min(this.maxDpr, 2.25);
-    if (fps < 38 && this.dpr > floor) next = Math.max(floor, this.dpr - 0.25);
-    else if (fps > 57 && this.dpr < ceil) next = Math.min(ceil, this.dpr + 0.25);
+    const floor = Math.min(1.0, this.maxDpr) * Q.dprFloor, ceil = this.dprCap;
+    const target = Q.fpsCap ? Q.fpsCap : 60;
+    if (fps < target * 0.63 && this.dpr > floor) next = Math.max(floor, this.dpr - 0.25);
+    else if (fps > target * 0.95 && this.dpr < ceil) next = Math.min(ceil, this.dpr + 0.25);
     if (next !== this.dpr) {
       this.dpr = next;
       this.onResize();
@@ -145,6 +168,7 @@ export class Engine {
   render(t) {
     if (this.lost) return;
     this.final.uniforms.uTime.value = t;
-    this.composer.render();
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 }
