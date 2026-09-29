@@ -23,8 +23,23 @@ export const TAN_HALF = Math.tan(Math.PI / N_AVE); // tan 22.5°
 // The whole hub sits on an elevated artificial ground (人工地盤) PLAT_H metres above the surrounding city.
 // Its outer rim is at along-distance EDGE on every avenue: glass-railed terraces overlook the lower city.
 export const PLAT_H = 28;
-export const EDGE = 212;
-export const TERRACE_END = EDGE - 3.2;  // walkable limit at the avenue terraces
+export const EDGE = 212;                          // octagon vertex radius (vertices lie on the avenue axes)
+export const EDGE_APO = EDGE * Math.cos(Math.PI / N_AVE); // apothem (edge mid-points, on the bisectors) ≈ 195.9
+export const TERRACE_END = EDGE - 3.2;
+// signed distance to the platform octagon edge (positive = inside)
+export function edgeDist(x, z) {
+  const a = Math.atan2(z, x) + Math.PI / 2;                // 0 at avenue 0 (−Z)
+  const seg = Math.PI * 2 / N_AVE;
+  const k = Math.floor(a / seg + 1e-9);
+  const mid = -Math.PI / 2 + (k + 0.5) * seg;              // bisector between avenue k and k+1
+  return EDGE_APO - (x * Math.cos(mid) + z * Math.sin(mid));
+}
+export function edgePoint(t) {
+  // t in [0, N_AVE): position along the octagon outline (integer t = avenue axis vertex)
+  const k = Math.floor(t) % N_AVE, f = t - Math.floor(t);
+  const a0 = -Math.PI / 2 + (k / N_AVE) * Math.PI * 2, a1 = -Math.PI / 2 + ((k + 1) / N_AVE) * Math.PI * 2;
+  return { x: Math.cos(a0) * EDGE * (1 - f) + Math.cos(a1) * EDGE * f, z: Math.sin(a0) * EDGE * (1 - f) + Math.sin(a1) * EDGE * f };
+}
 
 export function aveAngle(i) {
   // avenue 0 points to -Z (north) and goes clockwise seen from above
@@ -67,7 +82,7 @@ export function isWalkable(x, z, pad = 0.3) {
   if (r < PLAZA_R - 0.8 - pad) ok = r > 6.2 + pad;
   else {
     const L = aveLocal(x, z);
-    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && L.along < TERRACE_END - pad;
+    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && edgeDist(x, z) > 1.25 + pad;
   }
   if (!ok) return false;
   for (const o of obstacles) {

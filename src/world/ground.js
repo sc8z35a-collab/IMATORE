@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { Batch, worldUV, box, mat } from './geo.js';
 import {
-  HUB_R, RING_IN, RING_OUT, PLAZA_R, AVE_END, ROAD_HALF, N_AVE, CURB, aveDir, aveAngle, avePoint,
+  HUB_R, RING_IN, RING_OUT, PLAZA_R, AVE_END, ROAD_HALF, N_AVE, CURB, aveDir, aveAngle, avePoint, EDGE,
 } from './layout.js';
 
-const FAR = 320;
+// avenue edge line (lateral ±ROAD_HALF) meets the platform octagon at this along-distance
+const TAN_V = Math.tan(Math.PI / 2 - Math.PI / N_AVE) ; // slope of the octagon edge seen from the vertex
+const FAR = EDGE - ROAD_HALF / Math.tan((Math.PI - Math.PI * 2 / N_AVE) / 2);
 
 // intersection of avenue-i line at lateral s with circle radius r -> along distance
 function alongAt(r, s) { return Math.sqrt(Math.max(0, r * r - s * s)); }
@@ -92,13 +94,10 @@ export function buildGround(scene, M, refl) {
     g.rotateY(Math.atan2(d.x, d.z));
     g.translate(c.x, 0, c.z);
     b.add('asphalt', worldUV(g, 7, aveAngle(i)));
-    // cap
-    const cap = new THREE.PlaneGeometry(ROAD_HALF * 2 + 0.2, FAR - AVE_END);
-    cap.rotateX(-Math.PI / 2);
-    const cc = avePoint(i, (AVE_END + FAR) / 2, 0);
-    cap.rotateY(Math.atan2(d.x, d.z));
-    cap.translate(cc.x, CURB, cc.z);
-    b.add('pavers', worldUV(cap, 2.6, aveAngle(i)));
+    // terrace cap: pavement from the end of the road out to the prow of the platform
+    const cap = flatPoly([avePoint(i, AVE_END, -ROAD_HALF - 0.1), avePoint(i, FAR, -ROAD_HALF - 0.1), avePoint(i, EDGE, 0), avePoint(i, FAR, ROAD_HALF + 0.1), avePoint(i, AVE_END, ROAD_HALF + 0.1)].reverse(), CURB);
+    if (cap.attributes.normal.getY(0) < 0) cap.scale(1, 1, 1);
+    b.add('terrace', worldUV(cap, 1.6, aveAngle(i)));
     curbAlong(b, [avePoint(i, AVE_END, -ROAD_HALF), avePoint(i, AVE_END, ROAD_HALF)]);
   }
 
@@ -180,7 +179,7 @@ export function buildGround(scene, M, refl) {
   }
 
   const mats = {
-    plaza: M.plaza, asphalt: M.asphalt, pavers: M.pavers, curb: M.curb,
+    plaza: M.plaza, asphalt: M.asphalt, pavers: M.pavers, curb: M.curb, terrace: M.plaza,
     lineWhite: M.lineWhite, lineYellow: M.lineYellow,
     tactile: M.tactile || (M.tactile = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })),
   };
@@ -192,6 +191,6 @@ export function buildGround(scene, M, refl) {
     refl.patch(M.lineYellow, { wet: 0.6, puddle: 0.3 });
     refl.patch(mats.tactile, { wet: 0.6, puddle: 0.2 });
   }
-  const out = b.build(mats, scene, { shadows: { plaza: { receive: true }, asphalt: { receive: true }, pavers: { receive: true }, curb: { receive: true } } });
+  const out = b.build(mats, scene, { shadows: { terrace: { receive: true }, plaza: { receive: true }, asphalt: { receive: true }, pavers: { receive: true }, curb: { receive: true } } });
   return out;
 }
