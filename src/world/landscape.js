@@ -108,7 +108,7 @@ export const LANDMARKS = {
   lattice: { ...polar(135, 720), h: 333, name: 'TOKYO TOWER' },   // avenue 5
   skytree: { ...polar(-45, 1500), h: 634, name: 'SKYTREE' },      // avenue 1
   wheel: { ...polar(45, 980), h: 115, name: 'FERRIS WHEEL' },     // avenue 3
-  fuji: { ...polar(180, 5600), h: 780, name: 'MT. FUJI' },        // avenue 6
+  fuji: { ...polar(180, 4700), h: 820, name: 'MT. FUJI' },        // avenue 6
 };
 // skyscraper clusters: {deg, r, sigma, amp}
 export const CLUSTERS = [
@@ -132,7 +132,7 @@ const EAST_END = bayPoint(BRIDGE_ALONG - 260, BRIDGE_HALF + 900);
 
 export function isFree(x, z, margin = 0) {
   const r = Math.hypot(x, z);
-  if (r < 345) return false;
+  if (r < 224) return false;
   if (waterDepth(x, z) > -18 - margin) return false;
   if (Math.abs(r - EXPRESS_R) < 13 + margin) return false;
   if (Math.abs(r - RAIL_R) < 9 + margin) return false;
@@ -171,6 +171,135 @@ function hazeBasic(color, k = 1, { vertexColors = false, transparent = false, ad
         #include <colorspace_fragment>
       }`,
   });
+}
+
+
+// ---------------- shared GLSL ----------------
+const NOISE_GLSL = /* glsl */ `
+  float h21(vec2 p){ p = fract(p*vec2(233.34, 851.73)); p += dot(p, p+23.45); return fract(p.x*p.y); }
+  float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }`;
+
+// Procedural night facade used by every far building (instanced) and the platform retaining wall.
+// Inputs: vF = face coords in metres (u along the wall, v up from the ground), vN world normal, vW world pos,
+//         vS = (seed, style, height, width). style: 0 office, 1 glass tower, 2 residential, 3 dark/industrial
+const FACADE_GLSL = /* glsl */ `
+  vec3 facade(vec2 F, vec3 N, vec3 W, vec4 S){
+    float seed = S.x, style = S.y, H = S.z;
+    vec3 V = normalize(cameraPosition - W);
+    if (N.y > 0.5) {
+      // roof: dark membrane, a few lit skylights / helipads on tall towers
+      vec3 rc = vec3(0.018, 0.02, 0.028) + vec3(0.05,0.06,0.09) * max(dot(N, uMoon), 0.0) * 0.4;
+      return rc;
+    }
+    vec2 cell = style < 0.5 ? vec2(3.2, 3.6) : style < 1.5 ? vec2(1.6, 3.8) : style < 2.5 ? vec2(2.6, 2.9) : vec2(6.0, 5.0);
+    vec2 g = F / cell;
+    vec2 id = floor(g); vec2 f = fract(g);
+    float fh = h21(vec2(id.y * 1.37, seed * 91.7));
+    float pOn = style < 0.5 ? 0.62 : style < 1.5 ? 0.72 : style < 2.5 ? 0.55 : 0.08;
+    float floorOn = step(fh, pOn);
+    float run = h21(vec2(floor(id.x / (2.0 + floor(fh * 5.0))), id.y + seed * 13.1));
+    float lit = mix(step(0.9, run), step(0.22, run), floorOn);
+    // lit fraction goes down late at night on the upper floors of offices
+    float mx = style < 1.5 ? 0.12 : 0.18;
+    float win = step(mx, f.x) * step(f.x, 1.0 - mx) * step(0.16, f.y) * step(f.y, 0.86);
+    if (style > 0.5 && style < 1.5) win = step(0.06, f.x) * step(0.08, f.y);
+    float warmSel = h21(vec2(id.y + 3.1, seed * 17.0 + floor(id.x / 4.0)));
+    vec3 warm = vec3(1.0, 0.72, 0.42), cool = vec3(0.72, 0.86, 1.0), resi = vec3(1.0, 0.8, 0.55);
+    vec3 wc = style < 0.5 ? mix(warm, cool, step(0.45, warmSel)) : style < 1.5 ? mix(cool, vec3(0.9,0.95,1.0), warmSel) : mix(resi, vec3(0.55,0.7,1.0), step(0.85, warmSel));
+    float lvl = 0.35 + 0.75 * h21(id + seed);
+    // interior gradient (ceiling fixtures brighter)
+    lvl *= mix(0.65, 1.15, f.y);
+    vec3 em = wc * lit * win * lvl * 0.95;
+    // anti-alias: once a window cell is smaller than ~1.5px, fade to its average emission
+    vec2 fw = fwidth(g);
+    float aa = smoothstep(0.35, 0.9, max(fw.x, fw.y));
+    vec3 avg = wc * (pOn * 0.78 + (1.0 - pOn) * 0.1) * 0.55 * (style < 1.5 ? 0.62 : 0.5);
+    em = mix(em, avg, aa);
+    // ground floor shop band + entrance glow
+    float shop = (1.0 - step(4.4, F.y)) * step(0.4, F.y) * step(style, 2.5);
+    vec3 shopC = mix(vec3(1.0, 0.55, 0.3), vec3(0.4, 0.9, 1.0), h21(vec2(floor(F.x / 9.0), seed)));
+    em = mix(em, shopC * 0.9, shop * 0.8);
+    // LED crown band on tall towers (slowly colour-cycling), aviation-white top edge
+    if (H > 90.0) {
+      float top = step(H - 3.2, F.y) * step(F.y, H - 1.6);
+      vec3 crown = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + seed * 3.0 + uTime * 0.03));
+      em += crown * top * 1.6;
+      em += vec3(0.8, 0.9, 1.0) * step(H - 0.5, F.y) * 0.6;
+    }
+    // facade: very dark cladding, moon rim + faint city bounce from below
+    float moonL = max(dot(N, uMoon), 0.0);
+    vec3 base = vec3(0.028, 0.03, 0.04) * (0.6 + 0.8 * h21(vec2(seed, 1.0)));
+    vec3 col = base * (0.35 + moonL * 1.2) + vec3(0.05, 0.03, 0.04) * exp(-max(F.y, 0.0) / 30.0);
+    if (style > 0.5 && style < 1.5) {
+      // glass: reflects the moonlit sky a little at grazing angles
+      float fr = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+      col += vec3(0.1, 0.12, 0.2) * fr + vec3(0.6,0.65,0.8) * pow(max(dot(reflect(-V, N), uMoon), 0.0), 60.0) * 0.5;
+    }
+    return col + em;
+  }`;
+
+// size-attenuated glowing point sprites (street lights, windows of far suburbs, aviation lights, cars…)
+// aColor.rgb * intensity ; aSize = world diameter in metres ; aBlink = (phase, rate, duty, minPx)
+function pointsMaterial({ moving = false, additive = true } = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: LU, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: /* glsl */ `
+      attribute vec3 aColor; attribute float aSize; attribute vec4 aBlink;
+      ${moving ? 'attribute vec4 aA; attribute vec4 aB; attribute vec4 aM;' : ''}
+      uniform float uTime; uniform float uPx; uniform float uHazeDen;
+      varying vec3 vC; varying float vA;
+      void main(){
+        vec3 p = position;
+        ${moving ? `
+        // aA = (mode, r|ax, y|ay, az) ; aB = (bx, by, bz, len) ; aM = (speed m/s signed, phase 0..1, bob, -)
+        float s = fract(aM.y + uTime * aM.x / max(aB.w, 1.0));
+        if (aA.x < 0.5) { float a = s * 6.2831853; p = vec3(cos(a) * aA.y, aA.z, sin(a) * aA.y); }
+        else { p = mix(aA.yzw, aB.xyz, s); }
+        ` : ''}
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        float d = max(-mv.z, 0.1);
+        float px = aSize * uPx / d;
+        float bl = 1.0;
+        if (aBlink.y > 0.0) bl = step(fract(aBlink.x + uTime * aBlink.y), aBlink.z);
+        // sub-pixel lights: keep a minimum size and trade size for brightness (no shimmering)
+        float mn = max(aBlink.w, 1.2);
+        vA = bl * min(1.0, px / mn) * exp(-d * uHazeDen * 0.55);
+        gl_PointSize = clamp(px, mn, 48.0);
+        vC = aColor;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vC; varying float vA;
+      void main(){
+        vec2 q = gl_PointCoord - 0.5;
+        float r = length(q) * 2.0;
+        float a = exp(-r * r * 4.0) + 0.25 * exp(-r * 9.0);
+        if (a * vA < 0.004) discard;
+        gl_FragColor = vec4(vC * a * vA, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+}
+function pointsGeo(list, moving = false) {
+  // list items: {x,y,z,c:[r,g,b],s, b:[ph,rate,duty,minPx], A:[..4], B:[..4], M:[..4]}
+  const n = list.length;
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n), blink = new Float32Array(n * 4);
+  const A = moving ? new Float32Array(n * 4) : null, B = moving ? new Float32Array(n * 4) : null, M = moving ? new Float32Array(n * 4) : null;
+  list.forEach((p, k) => {
+    pos.set([p.x || 0, p.y || 0, p.z || 0], k * 3); col.set(p.c, k * 3); size[k] = p.s;
+    blink.set(p.b || [0, 0, 1, 1.2], k * 4);
+    if (moving) { A.set(p.A, k * 4); B.set(p.B, k * 4); M.set(p.M, k * 4); }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+  g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  g.setAttribute('aBlink', new THREE.BufferAttribute(blink, 4));
+  if (moving) { g.setAttribute('aA', new THREE.BufferAttribute(A, 4)); g.setAttribute('aB', new THREE.BufferAttribute(B, 4)); g.setAttribute('aM', new THREE.BufferAttribute(M, 4)); }
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 8000);
+  return g;
 }
 
 // =====================================================================================================
