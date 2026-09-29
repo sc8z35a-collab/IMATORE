@@ -10,8 +10,12 @@ import { Kiosks } from './world/kiosks.js';
 import { Props } from './world/props.js';
 import { CityLife } from './world/life.js';
 import { Controls } from './controls.js';
+import { Landscape, LU, LANDMARKS } from './world/landscape.js';
+import { Platform } from './world/platform.js';
+import { MapUI, terraceFor } from './ui/map.js';
+import { SETTINGS, PRESETS, Q, saveSettings } from './settings.js';
 import { QA_OFF, asset } from './util/qa.js';
-import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, groundHeight } from './world/layout.js';
+import { aveDir, avePoint, PLAZA_R, AVE_END, N_AVE, HUB_R, RING_OUT, EDGE, groundHeight } from './world/layout.js';
 import { DISTRICTS, TOP_NOW, TICKER, AS_OF, X_TRENDS } from './data/trends.js';
 
 const $ = (id) => document.getElementById(id);
@@ -62,6 +66,14 @@ async function boot() {
   const M = mats.build();
   buildGround(scene, M, refl);
 
+  setMsg('人工地盤と展望テラスを建設中…'); await tick();
+  const platform = new Platform(scene, M).build();
+  refl.hide.push(...platform.reflHide);
+
+  setMsg('湾岸・首都高・遠景の街を生成中…'); setProg(0.13); await tick();
+  const land = new Landscape(scene, { moonDir: sky.moonDir }).build();
+  refl.hide.push(...land.reflHide);
+
   setMsg('ビル群を建設中…'); setProg(0.16); await tick();
   const city = new City(scene, M, DISTRICTS).build();
 
@@ -71,6 +83,7 @@ async function boot() {
   setMsg('人と車を配置中…'); await tick();
   const life = new CityLife(scene, DISTRICTS, X_TRENDS).build();
   refl.hide.push(...life.holos);
+  if (life.crowd) refl.hide.push(life.crowd, life.umbrellas);
 
   setMsg('トレンド端末を起動中…'); setProg(0.28); await tick();
   const kiosks = new Kiosks(scene, M, DISTRICTS, TOP_NOW).build();
@@ -176,15 +189,17 @@ async function boot() {
   function tapMarker(p) { marker.position.set(p.x, groundHeight(p.x, p.z) + 0.04, p.z); marker.visible = true; markerT = 0; }
 
   // ---------- sheets ----------
-  function sheetOpen() { return !$('guide').classList.contains('hidden') || !$('detail').classList.contains('hidden'); }
-  function closeSheets() { $('guide').classList.add('hidden'); $('detail').classList.add('hidden'); }
-  function toggleGuide() { $('detail').classList.add('hidden'); $('guide').classList.toggle('hidden'); $('guide').scrollTop = 0; audio.blip(880); }
+  const SHEETS = ['guide', 'detail', 'map', 'settings'];
+  function sheetOpen() { return SHEETS.some((id) => !$(id).classList.contains('hidden')); }
+  function closeSheets() { SHEETS.forEach((id) => $(id).classList.add('hidden')); }
+  function toggleGuide() { ['detail', 'map', 'settings'].forEach((id) => $(id).classList.add('hidden')); $('guide').classList.toggle('hidden'); $('guide').scrollTop = 0; audio.blip(880); }
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => $(b.dataset.close).classList.add('hidden')));
   $('btn-guide').onclick = toggleGuide;
   window.addEventListener('keydown', (e) => {
     if (!controls.enabled) return;
     if (e.code === 'Escape') closeSheets();
     else if (e.code === 'KeyG' || e.code === 'Tab') { e.preventDefault(); toggleGuide(); }
+    else if (e.code === 'KeyM') { if ($('map').classList.contains('hidden')) openMap(); else closeSheets(); }
   });
   $('btn-run').onclick = () => { controls.runToggle = !controls.runToggle; $('btn-run').classList.toggle('on', controls.runToggle); audio.blip(660); };
   $('btn-gyro').onclick = async () => {
@@ -194,7 +209,7 @@ async function boot() {
     audio.blip(740);
   };
   // stop touch on sheets propagating to canvas
-  ['guide', 'detail'].forEach((id) => $(id).addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true }));
+  SHEETS.forEach((id) => $(id).addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true }));
 
   function heatRow(it, d, di, ki) {
     return `<div class="d-row" data-d="${di}" data-k="${ki}"><em>${esc(it.date)}</em><b>${esc(it.title)}</b><span class="h" style="color:${d.color}">${it.heat}</span></div>`;
@@ -292,38 +307,80 @@ async function boot() {
     }));
   }
 
-  // ---------- minimap ----------
-  const mm = $('minimap').getContext('2d');
-  function drawMinimap() {
-    const S = 240, c = S / 2, k = S / 2 / (AVE_END + 10);
-    mm.clearRect(0, 0, S, S);
-    mm.save();
-    mm.translate(c, c);
-    mm.rotate(controls.yaw);
-    mm.translate(-controls.pos.x * k * 2.2, -controls.pos.z * k * 2.2);
-    const kk = k * 2.2;
-    mm.lineCap = 'round';
-    DISTRICTS.forEach((d, i) => {
-      const dir = aveDir(i);
-      mm.strokeStyle = d.color; mm.globalAlpha = 0.8; mm.lineWidth = 14 * kk;
-      mm.beginPath(); mm.moveTo(dir.x * PLAZA_R * kk, dir.z * PLAZA_R * kk); mm.lineTo(dir.x * AVE_END * kk, dir.z * AVE_END * kk); mm.stroke();
-      mm.globalAlpha = 1;
-      mm.fillStyle = '#fff';
-      d.items.forEach((it) => { if (it._pos) mm.fillRect(it._pos.x * kk - 1.5, it._pos.z * kk - 1.5, 3, 3); });
-    });
-    mm.strokeStyle = 'rgba(160,220,255,.6)'; mm.lineWidth = (RING_OUT - HUB_R) * kk;
-    mm.beginPath(); mm.arc(0, 0, (HUB_R + RING_OUT) / 2 * kk, 0, 7); mm.stroke();
-    mm.fillStyle = '#27e0ff'; mm.beginPath(); mm.arc(0, 0, 5 * kk, 0, 7); mm.fill();
-    mm.restore();
-    // player
-    mm.fillStyle = '#fff';
-    mm.beginPath(); mm.moveTo(c, c - 9); mm.lineTo(c - 6, c + 6); mm.lineTo(c, c + 3); mm.lineTo(c + 6, c + 6); mm.closePath(); mm.fill();
-    // FOV cone
-    const g = mm.createRadialGradient(c, c, 0, c, c, 70);
-    g.addColorStop(0, 'rgba(39,224,255,.35)'); g.addColorStop(1, 'rgba(39,224,255,0)');
-    mm.fillStyle = g; mm.beginPath(); mm.moveTo(c, c); mm.arc(c, c, 70, -Math.PI / 2 - 0.6, -Math.PI / 2 + 0.6); mm.fill();
+  // ---------- map (renewed): heading-up minimap + full-screen HUB / AREA map ----------
+  const mapUI = new MapUI({
+    districts: DISTRICTS, mini: $('minimap'), full: $('map-canvas'),
+    onWarpDistrict: (i) => { closeSheets(); warpToDistrict(i); },
+    onWarpLandmark: (key) => { closeSheets(); warpToLandmark(key); },
+    onWarpHome: () => { closeSheets(); warpHome(); },
+  });
+  mapUI.prepare();
+  function openMap() {
+    $('detail').classList.add('hidden'); $('guide').classList.add('hidden'); $('settings').classList.add('hidden');
+    $('map').classList.remove('hidden');
+    requestAnimationFrame(() => mapUI.open(controls.pos, controls.yaw));
+    audio.blip(880);
   }
-  $('minimap').addEventListener('click', () => { $('detail').classList.add('hidden'); $('guide').classList.remove('hidden'); $('guide').scrollTop = 0; audio.blip(880); });
+  $('minimap').addEventListener('click', openMap);
+  $('btn-map').onclick = openMap;
+  document.querySelectorAll('[data-map]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-map]').forEach((x) => x.classList.toggle('on', x === b));
+    mapUI.setMode(b.dataset.map); audio.blip(760);
+  }));
+  window.addEventListener('resize', () => { if (!$('map').classList.contains('hidden')) { mapUI.resize(); mapUI.drawFull(); } });
+  function warpToLandmark(key) {
+    const i = terraceFor(key);
+    const L = LANDMARKS[key];
+    const p = avePoint(i, EDGE - 5.5, 0);
+    // pitch so the landmark sits nicely in frame (tall/near things -> look up a bit)
+    const dist = Math.hypot(L.x - p.x, L.z - p.z);
+    const pitch = Math.max(-0.05, Math.min(0.28, Math.atan2(L.h * 0.45 - 28, dist)));
+    controls.travelTo(p.x, p.z, { x: L.x, z: L.z, pitch }, { warp: true });
+    audio.whoosh();
+  }
+
+  // ---------- settings (画質プリセット / 超軽量モード) ----------
+  function buildSettings() {
+    const root = $('settings-body');
+    const presetBtns = Object.entries(PRESETS).map(([k, p]) => `<button class="pz${SETTINGS.preset === k ? ' on' : ''}" data-preset="${k}"><b>${esc(p.label)}</b><small>${esc(p.desc)}</small></button>`).join('');
+    const tog = (key, label, sub) => `<label class="tg"><span><b>${esc(label)}</b><small>${esc(sub)}</small></span><input type="checkbox" data-set="${key}" ${SETTINGS[key] ? 'checked' : ''}><i></i></label>`;
+    root.innerHTML = `
+      <h4>画質プリセット${SETTINGS.auto ? ' <em>(端末から自動選択)</em>' : ''}</h4>
+      <div class="pz-row">${presetBtns}</div>
+      <p class="note">プリセットの変更はページを再読み込みして反映します。超軽量モードはポストエフェクト・影・路面反射・遠景の密度・テクスチャ解像度を削減し、30fps に制限します。</p>
+      <h4>表示</h4>
+      ${tog('rain', '雨', '雨粒と路面の波紋')}
+      ${tog('fx', 'レンズ効果', 'フィルムグレイン・色収差・周辺減光')}
+      ${tog('people', '人を表示', 'オフ: 無人の街 (既定)。変更は再読み込み')}
+      ${tog('traffic', '無人運転の車', '環状道路の自動運転車。変更は再読み込み')}
+      ${tog('sound', 'サウンド', '環境音と効果音')}
+      <div class="stat" id="stat"></div>`;
+    root.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.preset === SETTINGS.preset && !SETTINGS.auto) return;
+      saveSettings({ preset: b.dataset.preset });
+      toast(`「${PRESETS[b.dataset.preset].label}」に切り替えます…`);
+      setTimeout(() => location.reload(), 500);
+    }));
+    root.querySelectorAll('[data-set]').forEach((el) => el.addEventListener('change', () => {
+      const k = el.dataset.set, v = el.checked;
+      saveSettings({ [k]: v });
+      if (k === 'rain') { sky.rainU.uAmt.value = v ? 1 : 0; refl.uniforms.uRain.value = v ? 1 : 0; }
+      else if (k === 'fx') engine.setLensFx(v);
+      else if (k === 'sound') audio.mute(!v);
+      else if (k === 'people' || k === 'traffic') { toast('再読み込みして反映します…'); setTimeout(() => location.reload(), 600); }
+      audio.blip(700);
+    }));
+  }
+  function openSettings() {
+    $('detail').classList.add('hidden'); $('guide').classList.add('hidden'); $('map').classList.add('hidden');
+    buildSettings();
+    $('settings').classList.remove('hidden');
+    const i = engine.renderer.info.render;
+    $('stat').textContent = `${Q.label} ・ 解像度 x${engine.dpr.toFixed(2)} ・ ${Math.round(engine.fps || 0)} fps ・ draw ${i.calls} ・ 遠景ビル ${land.buildingCount} 棟 ・ 光点 ${land.pointCount}`;
+    audio.blip(820);
+  }
+  $('btn-settings').onclick = openSettings;
+  $('ld-settings').onclick = (e) => { e.stopPropagation(); openSettings(); };
 
   // small transient notice (gyro unavailable, context restored, …)
   let toastT = 0;
@@ -346,6 +403,8 @@ async function boot() {
       if (al > 0 && lat < bd) { bd = lat; best = i; }
     }
     if (best < 0) return { name: 'CENTRAL PLAZA', d: -1 };
+    const al = x * aveDir(best).x + z * aveDir(best).z;
+    if (al > AVE_END + 4) return { name: `${DISTRICTS[best].name} TERRACE`, d: best, terrace: true };
     return { name: `${DISTRICTS[best].name} AVE.`, d: best };
   }
   const center = new THREE.Vector2(0, 0);
@@ -396,7 +455,8 @@ async function boot() {
   });
   function loop(now) {
     requestAnimationFrame(loop);
-    if (QA_OFF.fps && now - lastDraw < 1000 / QA_OFF.fps) return;
+    const cap = QA_OFF.fps || Q.fpsCap;
+    if (cap && now - lastDraw < 1000 / cap - 2) return;
     lastDraw = now;
     let dt = Math.min(QA_OFF.fps ? 0.5 : 0.05, (now - last) / 1000); last = now;
     t += dt; frame++;
@@ -428,6 +488,8 @@ async function boot() {
     engine.final.uniforms.uWarp.value = controls.warpAmt || 0;
 
     sky.update(t, camera.position);
+    LU.uPx.value = engine.renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    land.update(t, dt, camera.position);
     refl.uniforms.uTime.value = t;
     if (!QA_OFF.screens) screens.update(t, dt, camera.position);
     kiosks.update(t, dt);
@@ -440,8 +502,10 @@ async function boot() {
     engine.adapt(dt, t);
 
     if (controls.enabled && frame % 3 === 0) {
-      drawMinimap();
       const z = zoneAt(controls.pos.x, controls.pos.z);
+      const zd = z.d >= 0 ? DISTRICTS[z.d] : null;
+      mapUI.drawMini(controls.pos, controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0), { label: z.terrace ? 'TERRACE' : zd ? zd.name : 'PLAZA', color: zd ? zd.color : '#27e0ff' });
+      if (!$('map').classList.contains('hidden') && frame % 6 === 0) { mapUI.player = { x: controls.pos.x, z: controls.pos.z, yaw: controls.yaw }; mapUI.drawFull(t); }
       if (z.name !== lastZone) { $('zone').textContent = z.name; lastZone = z.name; audio.zone(z.d); }
       updatePrompt();
       audio.update(controls.pos, controls.vel.length(), dt * 3);
@@ -451,7 +515,7 @@ async function boot() {
   requestAnimationFrame(loop);
   // QA helper: instant teleport (x,z,yaw,pitch)
   const tp = (x, z, yaw = 0, pitch = 0.1) => { controls.travel = null; controls.warpAmt = 0; controls.pos.set(x, 0, z); controls.yaw = yaw; controls.pitch = pitch; controls.update(0.016); };
-  window.__imatore = { tp, avePoint, life, engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
+  window.__imatore = { tp, avePoint, life, land, platform, mapUI, openMap, openSettings, warpToLandmark, engine, controls, scene, camera, city, screens, kiosks, warpToDistrict, warpToItem, openItem, openTop };
 }
 
 // ---------------- procedural audio ----------------

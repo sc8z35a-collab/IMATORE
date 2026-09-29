@@ -18,7 +18,9 @@ export class Sky {
 
   build() {
     const scene = this.scene;
-    scene.fog = new THREE.FogExp2(0x0a0d18, 0.0052);
+    // near-city fog is now light: beyond the platform the landscape uses its own aerial-perspective haze
+    // (landscape.js applyHaze). Colour matches that haze so the transition at the rim is seamless.
+    scene.fog = new THREE.FogExp2(0x2a1f2c, 0.0024);
     scene.background = new THREE.Color(0x05070d);
 
     // ---- HDR env map (reflections only, background stays procedural) ----
@@ -95,7 +97,7 @@ export class Sky {
           #include <colorspace_fragment>
         }`,
     });
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1400, 64, 32), mat);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1400, 64, 32), mat); // xyww -> always at the far plane
     dome.frustumCulled = false;
     dome.renderOrder = -10;
     this.dome = dome;
@@ -140,7 +142,9 @@ export class Sky {
         }`,
     });
     const moon = new THREE.Mesh(new THREE.SphereGeometry(26, 96, 64), mat);
-    moon.position.copy(this.moonDir).multiplyScalar(1100);
+    // far beyond every landmark (camera far = 9000) so no tower can be occluded by it
+    moon.position.copy(this.moonDir).multiplyScalar(7600);
+    moon.scale.setScalar(7600 / 1100);
     moon.rotation.y = 2.2;
     moon.renderOrder = -9;
     this.moon = moon;
@@ -155,7 +159,7 @@ export class Sky {
     g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true }));
-    spr.scale.setScalar(240);
+    spr.scale.setScalar(240 * 7600 / 1100);
     spr.position.copy(moon.position).multiplyScalar(0.99);
     spr.renderOrder = -8;
     this.group.add(spr);

@@ -71,7 +71,7 @@ export class Engine {
     renderer.setPixelRatio(this.dpr);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(72, 1, 0.1, 5200);
+    this.camera = new THREE.PerspectiveCamera(72, 1, 0.12, 9000);
     this.camera.rotation.order = 'YXZ';
 
     // 超軽量: no composer at all — render straight to the canvas with ACES (saves 3-4 full-screen passes + MSAA RT)
