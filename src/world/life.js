@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng } from './textures.js';
 import { makeCanvas } from '../util/qa.js';
+import { SETTINGS, LITE } from '../settings.js';
 import {
   avePoint, aveDir, PLAZA_R, TIP_END, AVE_END, AVE_HALF, ROAD_HALF, N_AVE, CURB, HUB_R, RING_IN, RING_OUT,
 } from './layout.js';
@@ -274,8 +275,9 @@ export class CityLife {
   }
 
   build() {
-    this.buildCrowd();
-    this.buildTraffic();
+    // 無人の街: no pedestrians unless the user turns them on (settings → 人を表示)
+    if (SETTINGS.people) this.buildCrowd();
+    if (SETTINGS.traffic) this.buildTraffic();
     this.buildWires();
     this.buildLanterns();
     this.buildHolograms();
@@ -423,6 +425,7 @@ export class CityLife {
     const arm2 = new THREE.BoxGeometry(0.9, 0.07, 0.07); arm2.translate(0, 7.3, 0);
     const trans = new THREE.CylinderGeometry(0.22, 0.22, 0.7, 10); trans.translate(0.3, 6.4, 0);
     const pg = mergeGeometries([pole.toNonIndexed(), arm.toNonIndexed(), arm2.toNonIndexed(), trans.toNonIndexed()], false);
+    if (LITE) { this.group.remove(lines); lines.geometry.dispose(); }
     const pm = new THREE.MeshStandardMaterial({ color: 0x77787a, roughness: 0.85, metalness: 0.1 });
     const im = new THREE.InstancedMesh(pg, pm, poles.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion();

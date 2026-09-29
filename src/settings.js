@@ -56,6 +56,9 @@ function load() {
     rain: saved.rain !== undefined ? !!saved.rain : true,
     sound: saved.sound !== undefined ? !!saved.sound : true,
     fx: saved.fx !== undefined ? !!saved.fx : true, // lens grain / CA / vignette
+    // world premise: the city is deserted (無人の街). Pedestrians can be switched back on in settings.
+    people: saved.people !== undefined ? !!saved.people : false,
+    traffic: saved.traffic !== undefined ? !!saved.traffic : true, // driverless (無人運転) traffic on the ring
   };
 }
 
@@ -66,6 +69,6 @@ export const LITE = SETTINGS.preset === 'ultra';
 export function saveSettings(patch = {}) {
   Object.assign(SETTINGS, patch);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ preset: SETTINGS.preset, rain: SETTINGS.rain, sound: SETTINGS.sound, fx: SETTINGS.fx }));
+    localStorage.setItem(KEY, JSON.stringify({ preset: SETTINGS.preset, rain: SETTINGS.rain, sound: SETTINGS.sound, fx: SETTINGS.fx, people: SETTINGS.people, traffic: SETTINGS.traffic }));
   } catch (e) { /* private mode */ }
 }

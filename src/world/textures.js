@@ -88,9 +88,10 @@ export function windowTexture(seed, style = 'office') {
           g.globalAlpha = 0.7; g.fillStyle = '#05060a';
           g.fillRect(px, py + h * 0.72, w, h * 0.28);
           for (let k = 0; k < 3; k++) if (R() < 0.5) g.fillRect(px + R() * w * 0.8, py + h * (0.5 + R() * 0.15), 6 + R() * 16, h * 0.4);
-          if (R() < 0.2) { // person
+          if (R() < 0.2) { // empty office chair / monitor glow (the city is deserted — no people)
             const hx = px + R() * (w - 18);
-            g.beginPath(); g.arc(hx + 9, py + h * 0.5, 7, 0, 7); g.fill(); g.fillRect(hx + 2, py + h * 0.56, 14, h * 0.4);
+            g.fillRect(hx + 3, py + h * 0.62, 12, h * 0.12);
+            g.globalAlpha = lvl * 0.5; g.fillStyle = '#7fb8ff'; g.fillRect(hx, py + h * 0.52, 16, 9); g.fillStyle = '#05060a';
           }
           // blinds
           if (R() < 0.3) {
@@ -261,13 +262,13 @@ export function shopAtlas(seed = 3) {
       g.fillStyle = `rgba(0,0,0,${0.15 + R() * 0.35})`;
       g.fillRect(x + R() * W, y + H * 0.45 + R() * H * 0.4, 20 + R() * 60, 6 + R() * 40);
     }
-    // people silhouettes
+    // (no customers — deserted city) : bright display cases / hanging lamps instead
     for (let k = 0; k < 3; k++) {
-      if (R() < 0.6) continue;
-      g.fillStyle = 'rgba(0,0,0,.55)';
+      if (R() < 0.5) continue;
       const px = x + 40 + R() * (W - 80);
-      g.beginPath(); g.arc(px, y + H * 0.5, 14, 0, 7); g.fill();
-      g.fillRect(px - 18, y + H * 0.56, 36, H * 0.44);
+      g.fillStyle = 'rgba(255,255,255,.35)';
+      g.beginPath(); g.arc(px, y + H * 0.36, 8, 0, 7); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(px - 1, y + H * 0.28, 2, H * 0.08);
     }
     // header sign
     g.fillStyle = '#08080c';
