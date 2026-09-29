@@ -132,7 +132,7 @@ const EAST_END = bayPoint(BRIDGE_ALONG - 260, BRIDGE_HALF + 900);
 
 export function isFree(x, z, margin = 0) {
   const r = Math.hypot(x, z);
-  if (r < 224) return false;
+  if (r < 216 + margin * 1.42) return false;
   if (waterDepth(x, z) > -18 - margin) return false;
   if (Math.abs(r - EXPRESS_R) < 13 + margin) return false;
   if (Math.abs(r - RAIL_R) < 9 + margin) return false;
@@ -301,6 +301,31 @@ function pointsGeo(list, moving = false) {
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 8000);
   return g;
 }
+
+// material for arbitrary meshes carrying the facade shader. Geometry needs attributes:
+//   aF (vec2 facade metres), aS (vec4 seed/style/height/width)
+export function facadeMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: LU,
+    extensions: { derivatives: true },
+    vertexShader: /* glsl */ `
+      attribute vec2 aF; attribute vec4 aS;
+      varying vec3 vW; varying vec3 vN; varying vec2 vF; varying vec4 vS;
+      void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vW = wp.xyz; vN = normalize(mat3(modelMatrix) * normal); vF = aF; vS = aS; gl_Position = projectionMatrix * viewMatrix * wp; }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vW; varying vec3 vN; varying vec2 vF; varying vec4 vS;
+      ${HAZE_GLSL}
+      ${NOISE_GLSL}
+      ${FACADE_GLSL}
+      void main(){
+        vec3 col = facade(vF, normalize(vN), vW, vS);
+        gl_FragColor = vec4(applyHaze(col, vW), 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+}
+export { pointsMaterial, pointsGeo, hazeBasic };
 
 // =====================================================================================================
 export class Landscape {
@@ -581,8 +606,8 @@ Object.assign(Landscape.prototype, {
       const w = 14 + R() * 26, d = 14 + R() * 24;
       if (!isFree(x, z, Math.max(w, d) * 0.5)) continue;
       // near the platform keep it low-rise so the terraces look over rooftops
-      const nearK = Math.min(1, (r - 226) / 260);
-      let H = 12 + Math.pow(R(), 2.2) * (40 + 120 * nearK) + ch * (0.55 + R() * 0.7);
+      const nearK = Math.min(1, Math.max(0, (r - 226) / 300));
+      let H = 8 + Math.pow(R(), 2.2) * (16 + 140 * nearK) + ch * (0.55 + R() * 0.7) * Math.min(1, nearK * 2);
       if (r > 1700) H *= 0.7;
       const style = ch > 60 && R() < 0.6 ? 1 : H < 26 ? (R() < 0.7 ? 2 : 3) : R() < 0.25 ? 1 : R() < 0.15 ? 2 : 0;
       // align loosely with the same bending street grid as the ground shader

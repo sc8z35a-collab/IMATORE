@@ -59,7 +59,6 @@ export class City {
       for (const side of [-1, 1]) this.buildRow(b, i, side, signs, shops);
       this.buildEndLandmark(b, i);
     }
-    this.buildSkyline(b);
 
     const M = this.M;
     const mats = {
@@ -279,24 +278,40 @@ export class City {
     }
   }
 
-  // ---------- avenue end: tall landmark tower closing the vista ----------
+  // ---------- avenue end: twin-pylon gate carrying the giant vertical screen ----------
+  // The avenue no longer ends in a wall: it opens onto an observation terrace at the platform rim.
+  // Two slim towers flank the avenue and hold the screen high overhead, so the vista (landmarks, bay,
+  // mountains) frames beneath and around it.
   buildEndLandmark(b, i) {
     const R = this.R;
     const d = aveDir(i);
-    const c = avePoint(i, AVE_END + 14, 0);
     const yaw = yawFor(-d.x, -d.z);
-    const H = 120 + R() * 80;
+    const nx = -d.z, nz = d.x;
+    const at = AVE_END + 4;
+    const H = 70 + R() * 30;
     const key = 'f' + ((i + 3) % 6);
-    b.add(key, box(26, H, 24, { su: SU, sv: SV, faces: 'fbrl' }), mat(c.x, CURB, c.z, yaw));
-    b.add('roof', box(26, 0.01, 24, { faces: 't' }), mat(c.x, H + CURB, c.z, yaw));
-    b.add('roofProps', box(14, 10, 12), mat(c.x, H + CURB, c.z, yaw));
-    b.add('metal', new THREE.CylinderGeometry(0.2, 0.45, 26, 6), mat(c.x, H + 23, c.z));
-    b.add('redLight', new THREE.SphereGeometry(0.6, 8, 6), mat(c.x, H + 36.3, c.z));
-    // huge vertical screen at the end of the avenue
-    const f = avePoint(i, AVE_END + 14 - 12.2, 0);
-    this.screens.push({ x: f.x, y: 14 + 22, z: f.z, yaw, w: 20, h: 36, district: i, kind: 'end' });
-    // backing frame sits BEHIND the screen (further along +d, away from the viewer)
-    b.add('metalDark', box(21, 37, 0.5), mat(f.x + d.x * 0.4, 14 + 22 - 18.5, f.z + d.z * 0.4, yaw));
+    for (const s of [-1, 1]) {
+      const c = avePoint(i, at, s * 13.2);
+      b.add(key, box(8, H, 9, { su: SU, sv: SV, ou: R(), faces: 'fbrl' }), mat(c.x, CURB, c.z, yaw));
+      b.add('roof', box(8, 0.01, 9, { faces: 't' }), mat(c.x, H + CURB, c.z, yaw));
+      b.add('metal', new THREE.CylinderGeometry(0.12, 0.3, 12, 6), mat(c.x, H + 6, c.z));
+      b.add('redLight', new THREE.SphereGeometry(0.45, 8, 6), mat(c.x, H + 12.3, c.z));
+      // vertical LED edge on the inner corners
+      const e = avePoint(i, at - 4.55, s * 9.15);
+      b.add(i % 2 ? 'stripCyan' : 'stripPink', box(0.12, H - 2, 0.12), mat(e.x, CURB + 1, e.z, yaw));
+    }
+    // cross beam above the screen
+    const top = avePoint(i, at, 0);
+    const sh = 26, sw = 17.6, sy = 15.5;
+    b.add('metalDark', box(27, 2.2, 3.2), mat(top.x, sy + sh + 0.6, top.z, yaw));
+    b.add(i % 2 ? 'stripCyan' : 'stripPink', box(27, 0.12, 0.12), mat(top.x - d.x * 1.65, sy + sh + 0.7, top.z - d.z * 1.65, yaw));
+    // screen, facing the hub; backing frame behind it (further out along +d)
+    const f = avePoint(i, at - 1.2, 0);
+    this.screens.push({ x: f.x, y: sy + sh / 2, z: f.z, yaw, w: sw, h: sh, district: i, kind: 'end' });
+    b.add('metalDark', box(sw + 1, sh + 1, 0.6), mat(f.x + d.x * 0.45, sy - 0.5, f.z + d.z * 0.45, yaw));
+    // underside soffit lights (walking beneath the screen)
+    b.add('whiteLight', box(sw - 1, 0.06, 0.4), mat(f.x + d.x * 0.3, sy - 0.56, f.z + d.z * 0.3, yaw));
+    void nx; void nz;
   }
 
   // ---------- distant skyline ring ----------
