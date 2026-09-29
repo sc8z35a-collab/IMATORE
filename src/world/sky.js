@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { QA, imgPath, asset } from '../util/qa.js';
+import { Q, SETTINGS } from '../settings.js';
 
 // Night sky: procedural cloud dome lit by city glow, the (almost) harvest moon with NASA albedo,
 // stars, HDR environment for reflections, rain streaks, and the global light rig.
@@ -21,7 +22,7 @@ export class Sky {
     scene.background = new THREE.Color(0x05070d);
 
     // ---- HDR env map (reflections only, background stays procedural) ----
-    if (!QA || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load(asset('/hdr/night.hdr'), (hdr) => {
+    if ((!QA && Q.hdr) || new URLSearchParams(location.search).has('env')) new HDRLoader(this.manager).load(asset('/hdr/night.hdr'), (hdr) => {
       const pmrem = new THREE.PMREMGenerator(this.renderer);
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       const env = pmrem.fromEquirectangular(hdr).texture;
@@ -162,7 +163,7 @@ export class Sky {
 
   buildRain() {
     // GPU rain: instanced thin quads, positions wrapped around camera in the vertex shader
-    const N = 14000;
+    const N = Q.rainN;
     const g = new THREE.InstancedBufferGeometry();
     const base = new THREE.PlaneGeometry(0.012, 0.9);
     g.index = base.index;
@@ -179,7 +180,7 @@ export class Sky {
     g.instanceCount = N;
     this.rainU = {
       uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(34, 22, 34) },
-      uWind: { value: new THREE.Vector2(0.9, 0.35) }, uAmt: { value: 1 },
+      uWind: { value: new THREE.Vector2(0.9, 0.35) }, uAmt: { value: SETTINGS.rain ? 1 : 0 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.rainU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -223,8 +224,8 @@ export class Sky {
     // cool moonlight key (shadows)
     const key = new THREE.DirectionalLight(0x9fb4ff, 0.55);
     key.position.copy(this.moonDir).multiplyScalar(120);
-    key.castShadow = true;
-    key.shadow.mapSize.set(QA ? 1024 : 4096, QA ? 1024 : 4096);
+    key.castShadow = Q.shadows;
+    key.shadow.mapSize.set(QA ? 1024 : Q.shadowMap || 1024, QA ? 1024 : Q.shadowMap || 1024);
     const s = 70;
     Object.assign(key.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 10, far: 400 });
     key.shadow.camera.updateProjectionMatrix();

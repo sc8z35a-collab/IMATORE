@@ -1,17 +1,20 @@
 // QA mode (?qa=1): used ONLY by the headless PC test harness (1GB RAM + SwiftShader).
 // Real phones never set this flag and always get full quality.
 export const QA = new URLSearchParams(location.search).has('qa');
+// 超軽量 preset shares the QA low-res asset paths / canvas downscale (see settings.js)
+import { Q } from '../settings.js';
+const LO = QA || Q.loTex;
 // Root-absolute asset paths ('/img/x.jpg') are rewritten against Vite's base so the site also works
 // under a sub-path (GitHub Pages: /IMATORE/). With base './' this yields document-relative URLs.
 // Raw (un-bundled) serving — e.g. GitHub Pages on the repo root — has no import.meta.env and the
 // static files still live under public/, so resolve them there relative to the document.
 const BASE = import.meta.env ? import.meta.env.BASE_URL || '/' : './public/';
 export const asset = (p) => (typeof p === 'string' && p.startsWith('/') && !p.startsWith('//') ? BASE + p.slice(1) : p);
-export const texPath = (p) => asset(QA && p.startsWith('/tex/') && !p.startsWith('/tex/lo/') ? p.replace('/tex/', '/tex/lo/') : p);
+export const texPath = (p) => asset(LO && p.startsWith('/tex/') && !p.startsWith('/tex/lo/') ? p.replace('/tex/', '/tex/lo/') : p);
 
 // QA: canvases are allocated at reduced resolution; width/height are shadowed with the logical size
 // so all drawing code stays unchanged (a scale transform maps logical -> backing pixels).
-export const QA_CANVAS = QA && !new URLSearchParams(location.search).has('fullcanvas') ? 0.3 : 1;
+export const QA_CANVAS = QA && !new URLSearchParams(location.search).has('fullcanvas') ? 0.3 : Q.canvasScale || 1;
 export function makeCanvas(w, h) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -27,7 +30,7 @@ export function makeCanvas(w, h) {
   g.resetTransform = () => _set(sx, 0, 0, sy, 0, 0);
   return [c, g];
 }
-export const imgPath = (p) => asset(QA && typeof p === 'string' && p.startsWith('/img/') && !p.startsWith('/img/lo/') ? p.replace('/img/', '/img/lo/') : p);
+export const imgPath = (p) => asset(LO && typeof p === 'string' && p.startsWith('/img/') && !p.startsWith('/img/lo/') ? p.replace('/img/', '/img/lo/') : p);
 // fine-grained QA switches: ?qa=0.4&noshadow&norefl&nobloom
 const _q = new URLSearchParams(location.search);
 export const QA_OFF = { shadow: _q.has('noshadow'), refl: _q.has('norefl'), bloom: _q.has('nobloom'), compile: _q.has('nocompile'), screens: _q.has('noscreens'), fps: parseFloat(_q.get('fps')) || 0 };
