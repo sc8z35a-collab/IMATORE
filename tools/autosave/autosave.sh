@@ -101,7 +101,7 @@ save_once() {
 
 if [ "${1:-}" = "--once" ]; then save_once; exit 0; fi
 log "daemon start pid=$$ interval=${INTERVAL}s branch=$BRANCH"
-trap 'log "daemon stop"; kill ${SLP:-0} 2>/dev/null; rm -f "$DIR/.pid"; exit 0' TERM INT
+trap 'log "daemon stop"; [ -n "${SLP:-}" ] && kill "$SLP" 2>/dev/null; rm -f "$DIR/.pid"; exit 0' TERM INT
 while true; do
   date +%s > "$DIR/.heartbeat"
   save_once
