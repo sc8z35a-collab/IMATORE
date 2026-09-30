@@ -5,6 +5,7 @@ import {
   avePoint, aveDir, aveAngle, addObstacle, PLAZA_R, TIP_END, AVE_END, AVE_HALF, ROAD_HALF, N_AVE, CURB, HUB_R, RING_OUT, RING_IN,
 } from './layout.js';
 import { glow } from './materials.js';
+import { Q } from '../settings.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
 function M4(x, y, z, ry = 0, s = 1) { _e.set(0, ry, 0); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(s, s, s); return _m.compose(_p, _q, _s).clone(); }
@@ -59,7 +60,7 @@ function leafTexture() {
   g.strokeStyle = 'rgba(40,30,22,.9)'; g.lineWidth = 3;
   for (let k = 0; k < 6; k++) { const a = L() * 6.28; g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + Math.cos(a) * S * 0.3, S / 2 + Math.sin(a) * S * 0.3); g.stroke(); }
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.generateMipmaps = true;
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, Q.anisotropy || 8); t.generateMipmaps = true;
   return t;
 }
 function makeTree() {

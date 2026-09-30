@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeCanvas } from '../util/qa.js';
+import { Q } from '../settings.js';
 
 // ---------- helpers ----------
 export function rng(seed = 1) {
@@ -18,7 +19,7 @@ const canvas = makeCanvas;
 export function toTex(c, { srgb = true, repeat = false, aniso = 8 } = {}) {
   const t = new THREE.CanvasTexture(c);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = aniso;
+  t.anisotropy = Math.min(aniso, Q.anisotropy || 8); // B-004: honour preset
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;

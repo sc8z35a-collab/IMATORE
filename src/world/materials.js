@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { texPath } from '../util/qa.js';
+import { Q } from '../settings.js';
 import { windowTexture, facadeTexture, facadeRoughTexture } from './textures.js';
 
 // Shared PBR / procedural materials. Loaded once, reused everywhere.
 export class Materials {
   constructor(manager, renderer) {
     this.loader = new THREE.TextureLoader(manager);
-    this.aniso = renderer.capabilities.getMaxAnisotropy();
+    // preset cap (超軽量 2 / 標準 8 / 高画質 16) — B-004
+    this.aniso = Math.min(renderer.capabilities.getMaxAnisotropy(), Q.anisotropy || 8);
     this.m = {};
   }
 

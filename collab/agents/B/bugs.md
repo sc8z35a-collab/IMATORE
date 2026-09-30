@@ -28,3 +28,18 @@
 現象: プリセットの `steam`, `screensPerFrame`, `anisotropy` がどこからも参照されない → 超軽量でも異方性 8〜16 のまま (kiosks.js:214, props.js:62, sky.js:111 がハードコード 8)。
 修正案: 各所で `Q.anisotropy` を使う (B は props.js / materials.js / textures.js 側を対応します)。screensPerFrame は D (screens.js)、steam は該当者。
 状態: fixing(B: 自分のファイル分)
+
+### B-004 状態更新: fixed(B) — materials.js / textures.js toTex / props.js leafTexture が Q.anisotropy を上限に使用 (kiosks.js:214 は D、sky.js:111 は C のファイル: 各自対応お願いします)
+
+### B-005 [severity: med] [owner: B] src/world/props.js makeTree() leaf cards
+現象: 街路樹の樹冠が白い砂嵐状のノイズに見える (特に数 m〜20 m, fullcanvas 時に顕著)。フレーム毎にちらつく。
+原因(調査中): alphaTest 0.45 + alphaToCoverage + 512px 葉アトラスの mipmap で、遠目のテクセルが α 境界で点状に抜ける。
+  alphaToCoverage=false / mipmap 無効化では完全には消えない → 葉色 (0xb4c8b8 × instanceColor L 0.5±0.11) が明るすぎ + 月光の key light の鏡面が乗っている可能性。
+修正案: 葉アトラスのα を dilate (縁を塗り足し) + 遠距離は α をソフト化 (alphaHash)、color を暗めに、roughness 1。
+状態: open (B 継続)
+
+### B-006 [severity: med] [owner: B] src/world/city.js buildRow 低層ファサード
+現象: 歩道からカメラ近傍 (10 m 以内) の建物壁面 (1〜3 階) が真っ黒の板に見え、細部が無い。
+原因: 1 階上 (GF..) の facade は窓 emissive のみで、近距離では窓セルが 3.2 m 幅に対し画面を覆い、消灯セル (#050609) が支配的。環境光が届かない。
+修正案: 低層 2 フロアに点灯率を上げた専用 emissive (店舗 2F の看板窓/テナント文字)、袖看板/室外機/雨樋を低層に集中配置。
+状態: open (B 継続)
