@@ -179,3 +179,46 @@ body.sheet-open #prompt, body.sheet-open #crosshair, body.sheet-open #minimap, b
   #ticker-in { animation-duration: 200s; }
   .ld-btn:not(:disabled), .rot-phone, .sheet { animation: none !important; }
 }
+
+/* ---------- loader settings link ---------- */
+.ld-link { display: inline-block; margin-top: 12px; padding: 6px 14px; border-radius: 16px; border: 1px solid rgba(160,220,255,.25);
+  background: rgba(255,255,255,.04); color: rgba(234,246,255,.75); font-size: 11px; letter-spacing: .06em; }
+
+/* minimap is drawn as a rounded square (map.js roundRect r=34 on a 240 backing store) */
+#minimap { border-radius: 16px; }
+
+/* ---------- map sheet ---------- */
+#map { display: flex; flex-direction: column; }
+#map.hidden { display: none !important; }
+.map-tabs { display: flex; gap: 6px; margin: 0 0 10px; }
+.map-tabs button { flex: 1; padding: 8px 0; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: #cfe9ff;
+  font-family: Orbitron, sans-serif; font-size: 11px; letter-spacing: .25em; }
+.map-tabs button.on { border-color: var(--cyan); color: #fff; background: rgba(39,224,255,.16); box-shadow: 0 0 14px rgba(39,224,255,.3) inset; }
+#map-canvas { display: block; width: 100%; flex: 1 1 auto; min-height: 240px; border-radius: 14px; background: #070912; border: 1px solid rgba(160,220,255,.18);
+  touch-action: none; }
+@media (orientation: landscape) {
+  .sheet.sheet-wide { width: min(62vw, 640px); }
+  #map { overflow: hidden; }
+}
+
+/* ---------- settings sheet ---------- */
+#settings { z-index: 55; } /* also opened from the loader (z 50) */
+#settings-body h4 { margin: 16px 0 8px; font-family: Orbitron, 'Noto Sans JP', sans-serif; font-size: 11px; letter-spacing: .2em; opacity: .75; }
+#settings-body h4 em { font-style: normal; font-family: 'Noto Sans JP', sans-serif; letter-spacing: 0; opacity: .7; }
+.pz-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pz { padding: 10px 8px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: #fff; text-align: left; }
+.pz b { display: block; font-size: 13px; }
+.pz small { display: block; margin-top: 4px; font-size: 9.5px; line-height: 1.45; opacity: .65; }
+.pz.on { border-color: var(--cyan); background: rgba(39,224,255,.14); box-shadow: 0 0 16px rgba(39,224,255,.28) inset; }
+.note { font-size: 10.5px; line-height: 1.6; opacity: .55; margin: 8px 0 0; }
+.tg { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); cursor: pointer; }
+.tg b { display: block; font-size: 13px; }
+.tg small { display: block; font-size: 10px; opacity: .6; margin-top: 2px; }
+.tg input { position: absolute; opacity: 0; pointer-events: none; }
+.tg i { position: relative; flex: none; width: 44px; height: 24px; border-radius: 12px; background: rgba(255,255,255,.14); border: 1px solid var(--line); transition: background .2s; }
+.tg i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #cfd8e3; transition: transform .2s, background .2s; }
+.tg input:checked + i { background: rgba(39,224,255,.45); border-color: var(--cyan); }
+.tg input:checked + i::after { transform: translateX(20px); background: #fff; box-shadow: 0 0 8px var(--cyan); }
+.tg input:focus-visible + i { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.stat { margin-top: 14px; font-family: Orbitron, 'Noto Sans JP', sans-serif; font-size: 9.5px; letter-spacing: .04em; line-height: 1.6; opacity: .5; }
+#toast { z-index: 70; }

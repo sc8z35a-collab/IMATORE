@@ -458,7 +458,9 @@ async function boot() {
     const cap = QA_OFF.fps || Q.fpsCap;
     if (cap && now - lastDraw < 1000 / cap - 2) return;
     lastDraw = now;
-    let dt = Math.min(QA_OFF.fps ? 0.5 : 0.05, (now - last) / 1000); last = now;
+    const rawDt = (now - last) / 1000;
+    if (rawDt > 0 && rawDt < 1) engine.fps = engine.fps ? engine.fps * 0.95 + (1 / rawDt) * 0.05 : 1 / rawDt;
+    let dt = Math.min(QA_OFF.fps ? 0.5 : 0.05, rawDt); last = now;
     t += dt; frame++;
     if (intro < 0) {
       // attract mode behind loader: slow orbit high above the plaza
@@ -520,13 +522,21 @@ async function boot() {
 
 // ---------------- procedural audio ----------------
 function makeAudio() {
-  let ctx = null, master, rainG, humG, stepT = 0;
+  let ctx = null, master, rainG, humG, stepT = 0, muted = !SETTINGS.sound;
   const api = {
+    // settings → サウンド. Works before start() too (start() honours it).
+    mute(m) {
+      muted = !!m;
+      if (!ctx || !master) return;
+      const now = ctx.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setTargetAtTime(muted ? 0 : 0.9, now, 0.08);
+    },
     start() {
       if (ctx) return;
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
-        master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+        master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
         // rain: filtered noise
         const len = ctx.sampleRate * 2;
         const buf = ctx.createBuffer(2, len, ctx.sampleRate);
