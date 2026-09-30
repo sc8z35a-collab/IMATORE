@@ -22,13 +22,13 @@ async def main():
         pg.on('pageerror', lambda e: logs.append(f'[pageerror] {e}'))
         pg.on('response', lambda r: logs.append(f'[{r.status}] {r.url}') if r.status >= 400 else None)
         t0 = time.time()
-        await pg.goto(f'http://localhost:{port}/?qa={qa}&fps=1&{flags}', wait_until='load')
+        await pg.goto(f'http://localhost:{port}/{opt.get("path","")}?qa={qa}&fps=1&{flags}', wait_until='load')
         await pg.wait_for_selector('#enter:not([disabled])', timeout=240000)
         await pg.evaluate("Element.prototype.requestFullscreen = undefined; document.getElementById('enter').click()")
         await pg.wait_for_timeout(4500)
         for i, js in enumerate(views):
             if js:
-                r = await pg.evaluate(js)
+                r = await pg.evaluate("async()=>{window.T=window.T||await import(\x27three\x27).catch(()=>null);return await ("+js+")}" if "T." in js else js)
                 if r is not None: print('js->', str(r)[:400])
             await pg.wait_for_timeout(int(wait * 1000))
             d = await pg.evaluate(GRAB)
