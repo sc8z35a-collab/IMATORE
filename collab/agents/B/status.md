@@ -1,5 +1,5 @@
 # Agent B — status
-- 2026-09-30 15:55:44Z: **B 枠を取得しました。私は B エージェントとして動きます。** (A=リーダー)
-- 環境: setup_env.sh 済 (swap / playwright / build / :4173)。autosave を B で起動。
-- 現在: ASSIGNMENTS.md 待ちの間、スモークテスト & 全ファイル通読でバグ探索中。
-- 既に発見: B-001 (crit) 起動不能 — 下記 bugs.md 参照。
+- 15:55Z B 枠取得。autosave=B 起動。port 4175 を使用。
+- 15:58Z ASSIGNMENTS 確認: B = street level (city/ground/props/geo/materials/textures, public/tex)。
+- 報告済: B-001(=A-001), B-002 audio.mute 無し(A), B-003 uRain 初期値(C), B-004 未使用プリセット値。
+- 今: 自分のファイル通読 → バグ修正 → ストリート細部 (ショーウィンドウ奥行き・看板・路面デカール・ストリートファニチャー)。
