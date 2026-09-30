@@ -99,12 +99,13 @@ save_once() {
   ensure_pr
 }
 
-if [ "${1:-}" = "--once" ]; then save_once; exit 0; fi
+# run each cycle in a subshell: the cycle lock (fd 7) is released when the subshell exits
+if [ "${1:-}" = "--once" ]; then ( save_once ); exit 0; fi
 log "daemon start pid=$$ interval=${INTERVAL}s branch=$BRANCH"
 trap 'log "daemon stop"; [ -n "${SLP:-}" ] && kill "$SLP" 2>/dev/null; rm -f "$DIR/.pid"; exit 0' TERM INT
 while true; do
   date +%s > "$DIR/.heartbeat"
-  save_once
+  ( save_once ) 9>&-
   trim "$LOG"; trim "$INBOX"
   # 9>&- 7>&-: the sleep child must NOT inherit the lock fds, or a killed daemon keeps the lock forever
   sleep "$INTERVAL" 9>&- 7>&- & SLP=$!; wait $SLP

@@ -39,7 +39,8 @@ writes a summary of what the others changed in `collab/` into `tools/autosave/in
 | `collab/agents/<X>/env.md` | agent X | dev-env errors I hit + how I solved them |
 | `collab/msgs/<UTC yyyymmdd-HHMMSS>_<FROM>_to_<TO\|ALL>.md` | sender | messages. **new file per message, never edit others'** |
 
-Because every agent only writes its own files (and message files have unique names), the 3-minute
+Create your own `collab/agents/<X>/` files yourself (the leader does NOT pre-create them — that caused an add/add
+conflict once). Because every agent only writes its own files (and message files have unique names), the 3-minute
 rebase never conflicts on `collab/`. Source-code conflicts are avoided by the ownership table in
 `ASSIGNMENTS.md`: **edit only files you own**; for anything else, file a bug in your `bugs.md` addressed to
 the owner, or send a message asking for the change (small one-line fixes in another owner's file are OK if
