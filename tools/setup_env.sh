@@ -14,8 +14,15 @@ python3 -c "import playwright" 2>/dev/null || pip install -q playwright >/dev/nu
 [ -d ~/.cache/ms-playwright/chromium_headless_shell-* ] 2>/dev/null || python3 -m playwright install chromium >/dev/null 2>&1
 /sbin/ldconfig -p 2>/dev/null | grep -q libatk-1.0 || sudo python3 -m playwright install-deps chromium >/dev/null 2>&1
 npx vite build >/dev/null 2>&1
-if ! curl -s -o /dev/null localhost:4173/; then
-  (setsid nohup python3 -m http.server 4173 -d dist > /tmp/http.log 2>&1 < /dev/null &)
+# static server for dist/ (PORT=4175 bash tools/setup_env.sh for a per-agent port).
+# If something already listens on the port, verify it really serves *this* dist (the hashed bundle name
+# must match) — a stale server for another dir silently made QA test the wrong build once.
+PORT="${PORT:-4173}"
+want=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1)
+if curl -s -o /dev/null "localhost:$PORT/"; then
+  curl -s "localhost:$PORT/" | grep -q "$want" || echo "WARNING: :$PORT is serving something else (not this dist: $want). Use another PORT=."
+else
+  (setsid nohup python3 -m http.server "$PORT" -d dist > /tmp/http$PORT.log 2>&1 < /dev/null &)
   sleep 1
 fi
-echo "env ready: $(grep -c . /proc/swaps) swap entries, server $(curl -s -o /dev/null -w '%{http_code}' localhost:4173/)"
+echo "env ready: $(grep -c . /proc/swaps) swap entries, server :$PORT $(curl -s -o /dev/null -w '%{http_code}' localhost:$PORT/)"

@@ -96,10 +96,13 @@ function drawHub(g, districts, s, { labels = false, detail = false, t = 0 } = {}
       roundRect(g, -w / 2, -9 * px, w, 18 * px, 9 * px);
       g.fillStyle = 'rgba(4,8,20,.8)'; g.fill(); g.strokeStyle = d.color; g.lineWidth = 1.2 * px; g.stroke();
       g.fillStyle = d.color; g.fillText(d.name, 0, 0.5 * px);
+      // Japanese name sits *beside* the pill (perpendicular to the avenue) so it never overlaps the
+      // rotated English label (it used to be drawn 28 m further along the same axis -> collided)
+      g.font = `700 ${10 * px}px ${FONT}`;
+      g.lineWidth = 3 * px; g.strokeStyle = 'rgba(0,0,0,.75)';
+      g.strokeText(d.jp, 0, 17 * px);
+      g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(d.jp, 0, 17 * px);
       g.restore();
-      const q = avePoint(i, 146, 0);
-      g.font = `700 ${10 * px}px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.8)';
-      g.fillText(d.jp, q.x, q.z);
     });
     g.font = `900 ${11 * px}px ${OR}`; g.fillStyle = '#e8fbff';
     g.fillText('CENTRAL PLAZA', 0, HUB_R + 12 * px);
