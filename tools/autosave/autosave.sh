@@ -29,9 +29,11 @@ INBOX="$DIR/inbox.log"
 AGENT="${AGENT_ID:-$(cat "$DIR/.agent" 2>/dev/null || echo X)}"
 cd "$ROOT" || exit 1
 
-exec 9>"$DIR/.lock"
-flock -n 9 || { [ "${1:-}" = "--once" ] || echo "autosave already running"; [ "${1:-}" = "--once" ] || exit 0; }
-[ "${1:-}" = "--once" ] || echo $$ > "$DIR/.pid"
+if [ "${1:-}" != "--once" ]; then
+  exec 9>"$DIR/.lock"
+  flock -n 9 || { echo "autosave already running"; exit 0; }
+  echo $$ > "$DIR/.pid"
+fi
 
 log() { echo "[$(date -u '+%F %T')Z][$AGENT] $*" >> "$LOG"; }
 trim() { local f=$1; [ -f "$f" ] && [ "$(wc -l < "$f")" -gt 3000 ] && tail -n 1500 "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
@@ -49,6 +51,8 @@ ensure_pr() {
 }
 
 save_once() {
+  # one cycle at a time (daemon vs. now.sh)
+  exec 7>"$DIR/.cycle.lock"; flock -w 150 7 || { log "cycle lock busy, skip"; return 0; }
   [ -f "$DIR/.pause" ] && { log "paused"; return 0; }
   if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ] || [ -f .git/MERGE_HEAD ] || [ -f .git/CHERRY_PICK_HEAD ]; then log "git op in progress, skip"; return 0; fi
   local cur; cur=$(git rev-parse --abbrev-ref HEAD)
@@ -97,10 +101,11 @@ save_once() {
 
 if [ "${1:-}" = "--once" ]; then save_once; exit 0; fi
 log "daemon start pid=$$ interval=${INTERVAL}s branch=$BRANCH"
-trap 'log "daemon stop"; rm -f "$DIR/.pid"; exit 0' TERM INT
+trap 'log "daemon stop"; kill ${SLP:-0} 2>/dev/null; rm -f "$DIR/.pid"; exit 0' TERM INT
 while true; do
   date +%s > "$DIR/.heartbeat"
   save_once
   trim "$LOG"; trim "$INBOX"
-  sleep "$INTERVAL" & wait $!
+  # 9>&- 7>&-: the sleep child must NOT inherit the lock fds, or a killed daemon keeps the lock forever
+  sleep "$INTERVAL" 9>&- 7>&- & SLP=$!; wait $SLP
 done
