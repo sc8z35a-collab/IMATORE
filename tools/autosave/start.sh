@@ -5,7 +5,8 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -n "${1:-}" ] && echo "$1" > "$DIR/.agent"
 # watchdog is single-instance by its own flock -> always (re)launch it
-[ "${NO_WATCHDOG:-}" = 1 ] || setsid nohup bash "$DIR/watchdog.sh" > /dev/null 2>&1 < /dev/null &
+# (must be a plain command, not "[ ] || cmd &": that backgrounds a subshell which keeps the caller's stdout open -> tool call hangs)
+if [ "${NO_WATCHDOG:-}" != 1 ]; then setsid nohup bash "$DIR/watchdog.sh" > /dev/null 2>&1 < /dev/null & fi
 if [ -f "$DIR/.pid" ] && kill -0 "$(cat "$DIR/.pid")" 2>/dev/null; then
   hb=$(cat "$DIR/.heartbeat" 2>/dev/null || echo 0)
   if [ $(( $(date +%s) - hb )) -lt 600 ]; then echo "autosave running (pid $(cat "$DIR/.pid"), agent $(cat "$DIR/.agent" 2>/dev/null))"; exit 0; fi
