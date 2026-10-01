@@ -401,7 +401,7 @@ async function boot() {
         }
       }
     }
-    return { terrace: !!z.terrace, walkSignal: (t % 20) / 20 >= 0.67, // props.js signal cycle: cars red => pedestrians walk crossDist, crossPan };
+    return { terrace: !!z.terrace, walkSignal: (t % 20) / 20 >= 0.67, crossDist, crossPan }; // props.js signal cycle: cars red => pedestrians walk
   }
   // ---------- zone banner (entering an avenue / terrace / the plaza) ----------
   let zbT = 0;
