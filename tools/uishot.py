@@ -5,8 +5,10 @@
 # 3D is rendered at a tiny QA scale (?qa=0.2) — this harness is about the HTML layer.
 import sys, asyncio
 from playwright.async_api import async_playwright
+import os
+PORT = os.environ.get('QA_PORT', '4173')  # e.g. QA_PORT=4174 python3 tools/snap.py ...
 pre = sys.argv[1] if len(sys.argv) > 1 else '/tmp/ui'
-PORT = next((a.split('=')[1] for a in sys.argv if a.startswith('--port=')), '4173')
+PORT = next((a.split('=')[1] for a in sys.argv if a.startswith('--port=')), PORT)
 ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist',
         '--renderer-process-limit=1', '--in-process-gpu', '--disable-dev-shm-usage', '--mute-audio']
 UA = 'Mozilla/5.0 (Linux; Android 16; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'

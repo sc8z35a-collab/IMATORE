@@ -4,6 +4,8 @@
 # Also saves OUTPREFIX_hud.png (full page incl. HTML HUD) for the first view when --hud is given.
 import sys, asyncio, time, base64
 from playwright.async_api import async_playwright
+import os
+PORT = os.environ.get('QA_PORT', '4173')  # e.g. QA_PORT=4174 python3 tools/snap.py ...
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 opt = {a.split('=')[0][2:]: (a.split('=', 1)[1] if '=' in a else '1') for a in sys.argv[1:] if a.startswith('--')}
 prefix, views = args[0], args[1:] or ['']
@@ -22,7 +24,7 @@ async def main():
         pg.on('console', lambda m: logs.append(f'[{m.type}] {m.text[:240]}'))
         pg.on('pageerror', lambda e: logs.append(f'[pageerror] {e}'))
         t0 = time.time()
-        await pg.goto(f'http://localhost:4173/?qa={qa}&fps=1&{flags}', wait_until='load')
+        await pg.goto(f'http://localhost:{PORT}/?qa={qa}&fps=1&{flags}', wait_until='load')
         await pg.wait_for_selector('#enter:not([disabled])', timeout=240000)
         if 'loader' in opt:
             await pg.screenshot(path=f'{prefix}_loader.png')
