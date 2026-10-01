@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { makeCanvas, imgPath } from '../util/qa.js';
 import { wrapText, toTex } from './textures.js';
+import { Q } from '../settings.js';
 
 const JP = '"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif';
 const OR = 'Orbitron,"Noto Sans JP",sans-serif';
@@ -280,6 +281,7 @@ export class ScreenSystem {
       else ch = set.land[k % 2];
       const m = ledMaterial(ch.tex, a.w, a.h, ch.aspect, a.kind === 'band' ? 2.6 : 2.0);
       ch.mats.push(m);
+      (ch.anchors || (ch.anchors = [])).push({ x: a.x, z: a.z, r: Math.max(a.w, a.h) });
       const geo = new THREE.PlaneGeometry(a.w, a.h);
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(a.x, a.y, a.z);
@@ -298,11 +300,20 @@ export class ScreenSystem {
     this.time = t;
     const n = this.channels.length;
     if (!n) return;
-    const perFrame = Math.min(3, n);
-    for (let k = 0; k < perFrame; k++) {
+    // canvas redraw budget per frame from the quality preset (超軽量 1, others 3). Channels whose screens are
+    // all far away (>140 m + 4x screen size) are refreshed only every 12th turn so the budget goes to visible ones.
+    const perFrame = Math.min(Q.screensPerFrame || 3, n);
+    let done = 0;
+    for (let tries = 0; tries < n && done < perFrame; tries++) {
       const c = this.channels[this.cursor % n];
       this.cursor++;
+      if (camPos && c.anchors && !c.anchors.some((a) => Math.hypot(a.x - camPos.x, a.z - camPos.z) < 140 + a.r * 4)) {
+        // nobody can read this one from here: refresh rarely (keeps slideshows roughly in sync)
+        if ((c._skip = (c._skip || 0) + 1) < 12) continue;
+      }
+      c._skip = 0;
       c.update(t);
+      done++;
     }
     for (const m of this.meshes) m.material.uniforms.uTime.value = t;
   }
