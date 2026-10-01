@@ -275,3 +275,6 @@ body.sheet-open #zone-banner, body.sheet-open #compass { opacity: 0; }
   letter-spacing: .14em; padding: 2px 6px; border-radius: 6px; background: var(--gc, #27e0ff); color: #000; font-weight: 700; }
 .g-item.here { border-color: var(--gc, #27e0ff); box-shadow: 0 0 0 1px var(--gc, #27e0ff) inset, 0 0 18px color-mix(in srgb, var(--gc, #27e0ff) 35%, transparent); }
 .g-item.here .g-here { display: block; }
+.g-item.here .g-no { display: none; }
+.g-here { left: 10px; right: auto; }
+.g-item b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
