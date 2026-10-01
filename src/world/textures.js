@@ -488,3 +488,73 @@ export function plazaFloorTexture(districts) {
   g.shadowBlur = 0;
   return toTex(c, { aniso: 16 });
 }
+
+// ---------- 2F/3F tenant window signs (B-006) ----------
+// Japanese street facades read as "dense" mostly because the floors right above the shops carry lit window
+// lettering (歯科・英会話・ネイル・雀荘…) and backlit box signs. One atlas cell = one 3.2 m bay x one floor.
+const TENANTS = [
+  ['歯科', '#7fe0ff', 'DENTAL'], ['英会話', '#ffe14f', 'ENGLISH'], ['ネイル', '#ff8fd8', 'NAIL'], ['麻雀', '#7cff4f', '雀荘'],
+  ['整体', '#ffffff', '肩こり'], ['学習塾', '#ffb040', '個別指導'], ['美容室', '#ffc0f0', 'HAIR'], ['漫画喫茶', '#27e0ff', '24h'],
+  ['質屋', '#ffe14f', '買取'], ['司法書士', '#dfe8ff', '事務所'], ['ヨガ', '#b8ff9a', 'STUDIO'], ['ダーツ', '#ff4f4f', 'BAR'],
+  ['占い', '#c38bff', '手相'], ['眼科', '#7fe0ff', 'CLINIC'], ['ジム', '#ff9f1c', '24h FIT'], ['不動産', '#ffffff', '空室あり'],
+];
+export function tenantAtlas(seed = 41) {
+  const R = rng(seed);
+  const cols = 4, rows = 4, W = 256, H = 288;
+  const [c, g] = canvas(cols * W, rows * H);
+  g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  TENANTS.forEach(([name, col, sub], i) => {
+    const x = (i % cols) * W, y = ((i / cols) | 0) * H;
+    const m = 14, w = W - m * 2, h = H - m * 2 - 26;
+    // lit interior behind glass (fluorescent office light, slightly blue-white)
+    const grd = g.createLinearGradient(0, y + m, 0, y + m + h);
+    grd.addColorStop(0, '#dfe9f2'); grd.addColorStop(0.5, '#9fb0bf'); grd.addColorStop(1, '#3a4450');
+    g.globalAlpha = 0.55 + R() * 0.3; g.fillStyle = grd; g.fillRect(x + m, y + m, w, h); g.globalAlpha = 1;
+    // blinds half down on some
+    if (R() < 0.5) { g.fillStyle = 'rgba(10,12,16,.55)'; const bl = h * (0.15 + R() * 0.35); g.fillRect(x + m, y + m, w, bl); g.fillStyle = 'rgba(0,0,0,.25)'; for (let k = 0; k < bl; k += 7) g.fillRect(x + m, y + m + k, w, 2); }
+    // cutout window lettering (vinyl, coloured) — the signature of Japanese mixed-use buildings
+    g.fillStyle = col; g.shadowColor = col; g.shadowBlur = 8;
+    const vertical = R() < 0.35;
+    if (vertical) {
+      const ch = [...name], fs = Math.min(56, (h - 30) / ch.length);
+      g.font = `900 ${fs}px ${JP}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      ch.forEach((cc, k) => g.fillText(cc, x + m + 34, y + m + 18 + fs / 2 + k * fs));
+      g.font = `700 22px ${JP}`; g.textAlign = 'left'; g.fillText(sub, x + m + 70, y + m + h - 26);
+    } else {
+      let fs = 74; g.font = `900 ${fs}px ${JP}`;
+      while (g.measureText(name).width > w - 20 && fs > 20) { fs -= 4; g.font = `900 ${fs}px ${JP}`; }
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(name, x + W / 2, y + m + h * 0.42);
+      g.font = `700 24px ${OR}`; g.fillText(sub, x + W / 2, y + m + h * 0.74);
+    }
+    g.shadowBlur = 0;
+    // phone number strip (tiny, white) along the bottom of the glass
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = `700 16px ${OR}`; g.textAlign = 'center';
+    g.fillText(`03-${(1000 + R() * 8999) | 0}-${(1000 + R() * 8999) | 0}`, x + W / 2, y + m + h - 8);
+    // mullion + sash frame
+    g.fillStyle = '#0b0c10'; g.fillRect(x + W / 2 - 2, y + m, 4, h);
+    g.strokeStyle = '#1a1c22'; g.lineWidth = 6; g.strokeRect(x + m, y + m, w, h);
+    // spandrel under the window (dark) with a small lit floor number plate
+    g.fillStyle = '#07080b'; g.fillRect(x, y + H - m - 26, W, 26 + m);
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.font = `900 14px ${OR}`; g.textAlign = 'left'; g.fillText(`${2 + (i % 3)}F`, x + 10, y + H - 16);
+  });
+  return { tex: toTex(c), cols, rows };
+}
+
+// ---------- shutter (closed shop) ----------
+export function shutterTexture() {
+  const W = 512, H = 256;
+  const [c, g] = canvas(W, H);
+  const grd = g.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, '#8a8f97'); grd.addColorStop(1, '#5b6068');
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  for (let y = 0; y < H; y += 9) { g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, y, W, 2); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, y + 6, W, 2); }
+  const R = rng(5);
+  // graffiti tags + stickers + rust streaks
+  for (let k = 0; k < 6; k++) { g.globalAlpha = 0.25 + R() * 0.2; g.fillStyle = '#3a2a1a'; g.fillRect(R() * W, R() * H * 0.5, 2 + R() * 3, 40 + R() * 120); }
+  g.globalAlpha = 0.8; g.font = `900 46px ${OR}`; g.fillStyle = ['#ff4fd8', '#27e0ff', '#ffe14f'][(R() * 3) | 0];
+  g.save(); g.translate(W * 0.3, H * 0.62); g.rotate(-0.12); g.fillText('IMA', 0, 0); g.restore();
+  g.globalAlpha = 1; g.fillStyle = '#fff'; g.fillRect(W * 0.72, H * 0.4, 60, 40); g.fillStyle = '#c00'; g.font = `900 16px ${JP}`; g.fillText('本日休業', W * 0.72 + 2, H * 0.4 + 26);
+  g.fillStyle = '#2a2c30'; g.fillRect(0, H - 14, W, 14);
+  return toTex(c);
+}
