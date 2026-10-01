@@ -156,10 +156,15 @@ export class Engine {
     // floor 0.75 so weak GPUs on 1x screens can still recover; ceiling = the initial cap (2.25)
     const floor = Math.min(1.0, this.maxDpr) * Q.dprFloor, ceil = this.dprCap;
     const target = Q.fpsCap ? Q.fpsCap : 60;
-    if (fps < target * 0.63 && this.dpr > floor) next = Math.max(floor, this.dpr - 0.25);
-    else if (fps > target * 0.95 && this.dpr < ceil) next = Math.min(ceil, this.dpr + 0.25);
+    // C-005: a capped frame rate sits right at the target, so the old "> 0.95 * target -> raise" rule fired
+    // constantly and ping-ponged with the "too slow -> lower" rule. Raise only after two consecutive good
+    // windows and never within 10 s of a downgrade.
+    this._good = fps > target * 0.97 ? (this._good || 0) + 1 : 0;
+    if (fps < target * 0.63 && this.dpr > floor) { next = Math.max(floor, this.dpr - 0.25); this._downAt = now; }
+    else if (this._good >= 2 && this.dpr < ceil && now - (this._downAt ?? -1e9) > 10) next = Math.min(ceil, this.dpr + 0.25);
     if (next !== this.dpr) {
       this.dpr = next;
+      this._good = 0;
       this.onResize();
       this.frameTimes.length = 0;
     }

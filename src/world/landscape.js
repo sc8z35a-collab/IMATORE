@@ -369,18 +369,22 @@ function hazeLit(color, { emissive = 0x000000, ek = 0, stripes = 0, instanced = 
     uniforms: { ...LU, uColor: { value: new THREE.Color(color) }, uEm: { value: new THREE.Color(emissive).multiplyScalar(ek) }, uStripes: { value: stripes } },
     side,
     vertexShader: /* glsl */ `
-      varying vec3 vW; varying vec3 vN;
+      varying vec3 vW; varying vec3 vN; varying vec3 vIC;
       void main(){
         mat4 m = modelMatrix;
         #ifdef USE_INSTANCING
           m = modelMatrix * instanceMatrix;
+        #endif
+        vIC = vec3(1.0);
+        #ifdef USE_INSTANCING_COLOR
+          vIC = instanceColor; // C-003: per-instance tint (containers)
         #endif
         vec4 wp = m * vec4(position, 1.0);
         vW = wp.xyz; vN = normalize(mat3(m) * normal);
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uColor; uniform vec3 uEm; uniform float uStripes; varying vec3 vW; varying vec3 vN;
+      uniform vec3 uColor; uniform vec3 uEm; uniform float uStripes; varying vec3 vW; varying vec3 vN; varying vec3 vIC;
       ${HAZE_GLSL}
       void main(){
         vec3 N = normalize(vN);
@@ -388,7 +392,7 @@ function hazeLit(color, { emissive = 0x000000, ek = 0, stripes = 0, instanced = 
         float up = N.y * 0.5 + 0.5;
         // moonlight key + navy sky fill from above + warm city bounce from below
         vec3 l = vec3(0.30, 0.34, 0.48) * moon + mix(vec3(0.10, 0.05, 0.05), vec3(0.03, 0.04, 0.08), up);
-        vec3 c = uColor * l;
+        vec3 c = uColor * vIC * l;
         // red/white banding (crane booms, lattice legs)
         if (uStripes > 0.0) c = mix(c, c * vec3(2.2, 0.35, 0.3), step(0.5, fract(vW.y / uStripes)));
         c += uEm;
@@ -876,8 +880,12 @@ Object.assign(Landscape.prototype, {
     const im = new THREE.InstancedMesh(cg, hazeLit(0xffffff, { instanced: true }), boxes.length);
     const pal = [0xb03a2e, 0x2e6fb0, 0xc9a227, 0x2e8b57, 0x8a8f99, 0xd35400];
     const m4 = new THREE.Matrix4(), c = new THREE.Color();
-    boxes.forEach((b, k) => { m4.makeScale(1, b.h, 1).setPosition(b.x, WY + 2, b.z); im.setMatrixAt(k, m4); });
-    // hazeLit ignores instanceColor; tint by using a few meshes instead is overkill -> subtle variation via scale only
+    boxes.forEach((b, k) => {
+      m4.makeScale(1, b.h, 1).setPosition(b.x, WY + 2, b.z); im.setMatrixAt(k, m4);
+      im.setColorAt(k, c.set(pal[Math.floor(b.c * pal.length) % pal.length]).multiplyScalar(0.8 + R() * 0.4));
+    });
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.frustumCulled = false;
     im.name = 'containers';
     this.group.add(im);
     // ships at anchor / sailing slowly
@@ -1093,9 +1101,10 @@ Object.assign(Landscape.prototype, {
     // Fuji: concave cone with snow cap
     const F = LANDMARKS.fuji;
     const prof = [];
+    // C-002: LatheGeometry expects the profile bottom -> top (reversing it turned the cone inside out)
     for (let k = 0; k <= 24; k++) { const t = k / 24; prof.push(new THREE.Vector2(3400 * Math.pow(1 - t, 1.9) + 140 * (1 - t) + 70, t * F.h)); }
     prof.push(new THREE.Vector2(0, F.h));
-    const cone = new THREE.LatheGeometry(prof.reverse(), 64);
+    const cone = new THREE.LatheGeometry(prof, 64);
     const fm = new THREE.ShaderMaterial({
       uniforms: LU,
       vertexShader: /* glsl */ `varying vec3 vL; varying vec3 vN; varying vec3 vW; void main(){ vL = position; vN = normalize(mat3(modelMatrix)*normal); vec4 wp = modelMatrix*vec4(position,1.0); vW = wp.xyz; gl_Position = projectionMatrix*viewMatrix*wp; }`,

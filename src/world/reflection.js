@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { QA } from '../util/qa.js';
-import { Q } from '../settings.js';
+import { Q, SETTINGS } from '../settings.js';
 
 // Planar reflection for the ground plane (y = 0), shared by every ground material.
 // Materials get it injected via onBeforeCompile -> wet asphalt with puddles & rain ripples.
@@ -18,7 +18,7 @@ export class GroundReflection {
       tRefl: { value: this.rt.texture },
       uReflMat: { value: this.texMat },
       uTime: { value: 0 },
-      uRain: { value: 1 },
+      uRain: { value: SETTINGS.rain ? 1 : 0 }, // C-001: honour the saved rain toggle at boot
       uReflRes: { value: new THREE.Vector2(4, 4) },
     };
     this._clip = new THREE.Vector4();
