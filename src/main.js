@@ -369,7 +369,7 @@ async function boot() {
     root.querySelectorAll('[data-set]').forEach((el) => el.addEventListener('change', () => {
       const k = el.dataset.set, v = el.checked;
       saveSettings({ [k]: v });
-      if (k === 'rain') { sky.rainU.uAmt.value = v ? 1 : 0; refl.uniforms.uRain.value = v ? 1 : 0; }
+      if (k === 'rain') { sky.rainU.uAmt.value = v ? 1 : 0; refl.uniforms.uRain.value = v ? 1 : 0; audio.rain(v); }
       else if (k === 'fx') engine.setLensFx(v);
       else if (k === 'sound') audio.mute(!v);
       else if (k === 'people' || k === 'traffic') { toast('再読み込みして反映します…'); setTimeout(() => location.reload(), 600); }
@@ -387,6 +387,22 @@ async function boot() {
   $('btn-settings').onclick = openSettings;
   $('ld-settings').onclick = (e) => { e.stopPropagation(); openSettings(); };
 
+  // context for ambience: terrace wind, walk-signal chime near the 8 ring crossings
+  function audioInfo(z) {
+    const x = controls.pos.x, zz = controls.pos.z, r = Math.hypot(x, zz);
+    let crossDist = 1e9, crossPan = 0;
+    if (r > HUB_R - 6 && r < PLAZA_R + 8) {
+      for (let i = 0; i < N_AVE; i++) {
+        const c = avePoint(i, (HUB_R + RING_OUT) / 2, 0), dx = c.x - x, dz = c.z - zz, d = Math.hypot(dx, dz);
+        if (d < crossDist) {
+          crossDist = d;
+          // stereo position relative to the view direction
+          const yaw = controls.yaw; crossPan = (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / Math.max(d, 1);
+        }
+      }
+    }
+    return { terrace: !!z.terrace, walkSignal: (t % 20) / 20 >= 0.67, // props.js signal cycle: cars red => pedestrians walk crossDist, crossPan };
+  }
   // ---------- zone banner (entering an avenue / terrace / the plaza) ----------
   let zbT = 0;
   function zoneBanner(z, zd) {
@@ -577,7 +593,7 @@ async function boot() {
       if (z.name !== lastZone) { $('zone').textContent = z.name; if (lastZone) zoneBanner(z, zd); lastZone = z.name; audio.zone(z.d); }
       compass(controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0));
       updatePrompt();
-      audio.update(controls.pos, controls.vel.length(), dt * 3);
+      audio.update(controls.pos, controls.vel.length(), dt * 3, audioInfo(z));
     }
     if (frame % 30 === 0) updClock();
   }
@@ -588,36 +604,67 @@ async function boot() {
 }
 
 // ---------------- procedural audio ----------------
+// Everything is synthesised (no downloads): rain bed (+ near-field drips), city hum, ambient pad, wet footsteps
+// (L/R alternating), crossing "piyo-piyo" chime near signalled crossings, distant train passes, terrace wind,
+// UI blips, warp whoosh and a 2-note zone stinger. Respects settings サウンド / 雨.
 function makeAudio() {
-  let ctx = null, master, rainG, humG, stepT = 0, muted = !SETTINGS.sound;
+  let ctx = null, master, rainG, dripG, humG, windG, windF, noiseBuf, stepT = 0, stepSide = 1, muted = !SETTINGS.sound;
+  let rainOn = SETTINGS.rain, chimeT = 0, trainT = 8 + Math.random() * 20, wind = 0;
+  const now = () => ctx.currentTime;
+  function noiseSrc(rate = 1) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.playbackRate.value = rate; return s; }
+  // looping bed: random start offset so the 4 beds sharing one buffer are decorrelated
+  function loopBed(rate) { const s = noiseSrc(rate); s.start(0, Math.random() * 1.9); return s; }
+  function pan(x) { if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, x)); return p; } return ctx.createGain(); }
+  function tone(f, t0, dur, vol, type = 'sine', dest = master) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(dest); o.start(t0); o.stop(t0 + dur + 0.05);
+    return o;
+  }
   const api = {
     // settings → サウンド. Works before start() too (start() honours it).
     mute(m) {
       muted = !!m;
       if (!ctx || !master) return;
-      const now = ctx.currentTime;
-      master.gain.cancelScheduledValues(now);
-      master.gain.setTargetAtTime(muted ? 0 : 0.9, now, 0.08);
+      master.gain.cancelScheduledValues(now());
+      master.gain.setTargetAtTime(muted ? 0 : 0.9, now(), 0.08);
+    },
+    // settings → 雨: the rain bed and drips follow the visual rain
+    rain(on) {
+      rainOn = !!on;
+      if (!ctx) return;
+      rainG.gain.setTargetAtTime(rainOn ? 0.11 : 0, now(), 0.4);
+      dripG.gain.setTargetAtTime(rainOn ? 0.05 : 0, now(), 0.4);
     },
     start() {
       if (ctx) return;
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
-        master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
-        // rain: filtered noise
+        master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9;
+        // gentle bus compressor so stacked one-shots never clip on phone speakers
+        const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+        master.connect(comp).connect(ctx.destination);
         const len = ctx.sampleRate * 2;
-        const buf = ctx.createBuffer(2, len, ctx.sampleRate);
-        for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; }
-        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        noiseBuf = ctx.createBuffer(2, len, ctx.sampleRate);
+        for (let c = 0; c < 2; c++) { const d = noiseBuf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; }
+        // rain bed: filtered stereo noise
         const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000;
-        rainG = ctx.createGain(); rainG.gain.value = 0.11;
-        src.connect(hp).connect(lp).connect(rainG).connect(master); src.start();
-        // city hum: low brown-ish noise + 2 detuned oscillators
-        const src2 = ctx.createBufferSource(); src2.buffer = buf; src2.loop = true; src2.playbackRate.value = 0.25;
+        rainG = ctx.createGain(); rainG.gain.value = rainOn ? 0.11 : 0;
+        loopBed(1).connect(hp).connect(lp).connect(rainG).connect(master);
+        // near-field drips: sparse resonant clicks (a slowed noise through a peaky bandpass)
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 8;
+        dripG = ctx.createGain(); dripG.gain.value = rainOn ? 0.05 : 0;
+        loopBed(0.07).connect(bp).connect(dripG).connect(master);
+        // city hum: low brown-ish noise
         const lp2 = ctx.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 180;
         humG = ctx.createGain(); humG.gain.value = 0.22;
-        src2.connect(lp2).connect(humG).connect(master); src2.start();
+        loopBed(0.25).connect(lp2).connect(humG).connect(master);
+        // terrace wind: band-passed noise whose centre wanders (gusts)
+        windF = ctx.createBiquadFilter(); windF.type = 'bandpass'; windF.frequency.value = 420; windF.Q.value = 0.7;
+        windG = ctx.createGain(); windG.gain.value = 0;
+        loopBed(0.5).connect(windF).connect(windG).connect(master);
         // ambient pad
         const pad = ctx.createGain(); pad.gain.value = 0.018; pad.connect(master);
         [110, 164.8, 220.5, 329.6].forEach((f, k) => {
@@ -627,6 +674,7 @@ function makeAudio() {
           o.connect(pad); o.start();
         });
       } catch (e) { ctx = null; }
+      if (ctx) ctx.resume?.().catch(() => {});
     },
     suspend(hidden) {
       if (!ctx) return;
@@ -635,9 +683,9 @@ function makeAudio() {
     blip(f = 880) {
       if (!ctx) return;
       const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = 'sine'; o.frequency.setValueAtTime(f, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(f * 1.5, ctx.currentTime + 0.08);
-      g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
-      o.connect(g).connect(master); o.start(); o.stop(ctx.currentTime + 0.2);
+      o.type = 'sine'; o.frequency.setValueAtTime(f, now()); o.frequency.exponentialRampToValueAtTime(f * 1.5, now() + 0.08);
+      g.gain.setValueAtTime(0.08, now()); g.gain.exponentialRampToValueAtTime(0.0001, now() + 0.18);
+      o.connect(g).connect(master); o.start(); o.stop(now() + 0.2);
     },
     whoosh() {
       if (!ctx) return;
@@ -646,31 +694,72 @@ function makeAudio() {
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
       const s = ctx.createBufferSource(); s.buffer = buf;
       const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2;
-      f.frequency.setValueAtTime(300, ctx.currentTime); f.frequency.exponentialRampToValueAtTime(3000, ctx.currentTime + 0.7); f.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 1.4);
+      f.frequency.setValueAtTime(300, now()); f.frequency.exponentialRampToValueAtTime(3000, now() + 0.7); f.frequency.exponentialRampToValueAtTime(400, now() + 1.4);
       const g = ctx.createGain(); g.gain.value = 0.35;
       s.connect(f).connect(g).connect(master); s.start();
     },
-    zone(d) { if (ctx && d >= 0) api.blip(520 + d * 60); },
-    update(pos, spd, dt = 0.05) {
+    // 2-note stinger, pitch set per district (plaza = rising fifth)
+    zone(d) {
+      if (!ctx) return;
+      const base = d >= 0 ? 392 * Math.pow(2, [0, 2, 4, 5, 7, 9, 11, 12][d % 8] / 12) : 523.25;
+      const t0 = now() + 0.01;
+      tone(base, t0, 0.5, 0.05, 'triangle'); tone(base * 1.5, t0 + 0.11, 0.7, 0.04, 'sine');
+    },
+    // footstep on wet pavement: short noise burst + small splash, alternating L/R
+    step(run) {
+      const len = Math.floor(ctx.sampleRate * 0.11);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate); const dd = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) { const e = i / len; dd[i] = (Math.random() * 2 - 1) * (Math.pow(1 - e, 4) + (rainOn ? 0.35 * Math.exp(-Math.pow((e - 0.35) * 9, 2)) : 0)); }
+      const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.9 + Math.random() * 0.25;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = (rainOn ? 1700 : 1200) + Math.random() * 600; f.Q.value = 0.9;
+      const g = ctx.createGain(); g.gain.value = run ? 0.15 : 0.11;
+      stepSide = -stepSide;
+      s.connect(f).connect(g).connect(pan(stepSide * 0.18)).connect(master); s.start();
+    },
+    // Japanese audible pedestrian signal (通りゃんせ-style 擬音 "piyo-piyo"): two quick chirps
+    chime(x) {
+      const t0 = now() + 0.01, p = pan(x);
+      p.connect(master);
+      for (const [dt, f] of [[0, 2600], [0.16, 2200]]) {
+        const o = tone(f, t0 + dt, 0.12, 0.028, 'sine', p);
+        o.frequency.exponentialRampToValueAtTime(f * 0.78, t0 + dt + 0.1);
+      }
+    },
+    // distant elevated train passing: rumble swell + rhythmic wheel clatter, slow pan across the stereo field
+    train() {
+      const dur = 7, t0 = now(), p = pan(-0.8);
+      if (p.pan) p.pan.linearRampToValueAtTime(0.8, t0 + dur);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.07, t0 + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260;
+      const src = noiseSrc(0.35); src.connect(lp).connect(g).connect(p).connect(master);
+      src.start(t0); src.stop(t0 + dur + 0.1);
+      for (let k = 0; k < 14; k++) { const tk = t0 + 1 + k * 0.38 + (k % 2) * 0.09; tone(95, tk, 0.09, 0.02 * Math.sin(Math.PI * (k / 14)) + 0.002, 'square', p); }
+    },
+    update(pos, spd, dt = 0.05, info = {}) {
       if (!ctx) return;
       // iOS/Android may start the context suspended or suspend it after an interruption
       if (ctx.state === 'suspended' && !document.hidden) ctx.resume().catch(() => {});
       // footsteps (frame-rate independent: ~1.8 steps/s at walking speed)
       if (spd > 0.8) {
         stepT -= dt * 1.8 * (spd / 4.2);
-        if (stepT <= 0) {
-          stepT = 1;
-          const len = ctx.sampleRate * 0.09;
-          const buf = ctx.createBuffer(1, len, ctx.sampleRate); const dd = buf.getChannelData(0);
-          for (let i = 0; i < len; i++) dd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-          const s = ctx.createBufferSource(); s.buffer = buf;
-          const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400 + Math.random() * 600; f.Q.value = 0.9;
-          const g = ctx.createGain(); g.gain.value = 0.12;
-          s.connect(f).connect(g).connect(master); s.start();
-        }
+        if (stepT <= 0) { stepT = 1; api.step(spd > 6); }
       }
       const r = Math.hypot(pos.x, pos.z);
-      humG.gain.value = 0.16 + 0.1 * Math.max(0, 1 - r / 60);
+      humG.gain.setTargetAtTime(0.16 + 0.1 * Math.max(0, 1 - r / 60), now(), 0.3);
+      // wind: strong on the terraces (open edge of the platform), a breath elsewhere; gusty filter sweep
+      wind += ((info.terrace ? 1 : 0.08) - wind) * Math.min(1, dt * 0.8);
+      const gust = 0.6 + 0.4 * Math.sin(now() * 0.37) * Math.sin(now() * 0.11 + 1.3);
+      windG.gain.setTargetAtTime(0.09 * wind * gust, now(), 0.25);
+      windF.frequency.setTargetAtTime(300 + 500 * gust, now(), 0.5);
+      // crossing chime while the signal is green and we stand near a ring crossing (PLAZA_R ring, on an avenue axis)
+      chimeT -= dt;
+      if (info.walkSignal && chimeT <= 0 && info.crossDist < 16) {
+        chimeT = 1.25;
+        api.chime(info.crossPan || 0);
+      }
+      // distant train every ~25-50 s
+      trainT -= dt;
+      if (trainT <= 0) { trainT = 25 + Math.random() * 25; api.train(); }
     },
   };
   return api;
