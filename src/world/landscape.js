@@ -174,6 +174,34 @@ function hazeBasic(color, k = 1, { vertexColors = false, transparent = false, ad
 }
 
 
+// 眺望保全 (protected view corridors): every avenue terrace frames a landmark; far buildings standing in that
+// line of sight are capped below the eye->landmark sight line, like Tokyo's 富士見坂 rules. Without this the
+// 820 m Fuji (4.7 km away, ~10° above the horizon) was completely hidden behind the far city.
+const VISTA_EYE_Y = PLAT_H + 1.6;                    // terrace eye height above the lower city ground
+const VISTAS = [
+  { key: 'fuji', aim: 0.32, half: 0.075 },           // aim = fraction of the landmark height the sight line hits
+  { key: 'lattice', aim: 0.18, half: 0.06 },
+  { key: 'skytree', aim: 0.16, half: 0.05 },
+  { key: 'wheel', aim: 0.05, half: 0.07 },
+];
+function vistaCap(x, z) {
+  let cap = Infinity;
+  for (const v of VISTAS) {
+    const L = LANDMARKS[v.key], D = Math.hypot(L.x, L.z), ux = L.x / D, uz = L.z / D;
+    const along = x * ux + z * uz;
+    if (along < 200 || along > D - 80) continue;
+    const lat = Math.abs(-x * uz + z * ux);
+    const w = along * Math.tan(v.half) + 25;           // corridor widens with distance (angular cone)
+    if (lat > w * 1.6) continue;
+    const ty = L.h * v.aim;
+    const line = VISTA_EYE_Y + (ty - VISTA_EYE_Y) * (along - 205) / (D - 205);
+    // soft shoulder: full cap inside the cone, relaxing toward its edge
+    const k = Math.min(1, Math.max(0, (lat - w) / (w * 0.6)));
+    cap = Math.min(cap, Math.max(9, line - 6) + k * 400);
+  }
+  return cap;
+}
+
 // ---------------- shared GLSL ----------------
 const NOISE_GLSL = /* glsl */ `
   float h21(vec2 p){ p = fract(p*vec2(233.34, 851.73)); p += dot(p, p+23.45); return fract(p.x*p.y); }
@@ -613,14 +641,17 @@ Object.assign(Landscape.prototype, {
       const nearK = Math.min(1, Math.max(0, (r - 226) / 300));
       let H = 8 + Math.pow(R(), 2.2) * (16 + 140 * nearK) + ch * (0.55 + R() * 0.7) * Math.min(1, nearK * 2);
       if (r > 1700) H *= 0.7;
+      H = Math.min(H, vistaCap(x, z));
       const style = ch > 60 && R() < 0.6 ? 1 : H < 26 ? (R() < 0.7 ? 2 : 3) : R() < 0.25 ? 1 : R() < 0.15 ? 2 : 0;
       // align loosely with the same bending street grid as the ground shader
       const yaw = R() < 0.8 ? (Math.floor(R() * 4) * Math.PI) / 2 + (Math.sin(x * 0.0011) * 0.8) : R() * TAU;
       const seed = R();
       list.push({ x, z, w, d, h: H, y0: 0, yaw, seed, style });
       // setback tiers / crowns on tall towers
-      if (H > 110 && R() < 0.75) list.push({ x, z, w: w * 0.68, d: d * 0.68, h: 8 + R() * H * 0.28, y0: H, yaw, seed: seed + 0.3, style });
-      if (H > 150 && R() < 0.5) list.push({ x, z, w: w * 0.4, d: d * 0.4, h: 6 + R() * 14, y0: H + 10, yaw: yaw + 0.785, seed: seed + 0.6, style: 3 });
+      // (tiers are kept under the view-corridor cap too)
+      const room = vistaCap(x, z) - H;
+      if (H > 110 && R() < 0.75 && room > 20) list.push({ x, z, w: w * 0.68, d: d * 0.68, h: Math.min(room - 2, 8 + R() * H * 0.28), y0: H, yaw, seed: seed + 0.3, style });
+      if (H > 150 && R() < 0.5 && room > 40) list.push({ x, z, w: w * 0.4, d: d * 0.4, h: 6 + R() * 14, y0: H + 10, yaw: yaw + 0.785, seed: seed + 0.6, style: 3 });
     }
     const n = list.length;
     const aBox = new Float32Array(n * 4), aPos = new Float32Array(n * 4), aSty = new Float32Array(n * 2);
