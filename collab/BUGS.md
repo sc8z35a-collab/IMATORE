@@ -26,3 +26,5 @@ Format / IDs: see README §2. 状態: open → fixing(X) → fixed(commit) / won
 | C-005 | low | C | engine.js | DPR ping-pong at 30 fps cap (ultra) | fixing(C) |
 | C-006 | low | C | sky.js | moon corona sprite visible through thick clouds | fixing(C) |
 | A-012 | low | A | main.js | prompt showed only the title; no district/heat context; nothing on terraces (landmarks unnamed) | fixed (prompt card + landmark spotting) |
+| A-013 | crit | A | main.js:404 | own regression: `// comment` placed mid-line swallowed `crossDist, crossPan };` → SyntaxError, boot dead. Found+fixed by B (c536e7b) | fixed |
+| A-014 | med | A | main.js audio | sound bed ignored the 雨 toggle; loop sources shared one buffer in phase; no limiter → clipping when one-shots stack | fixed |

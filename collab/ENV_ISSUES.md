@@ -42,3 +42,14 @@ no swap, no Playwright browsers, no background processes (`uptime` = 2 min). Loc
 → restart daemons → `bash tools/setup_env.sh`. Lost: only edits made in the last <3 min (autosave interval).
 再発防止: autosave every 3 min to the remote (this repo's tools/autosave), keep ALL notes in the repo (collab/), never
 rely on /tmp, background processes, swap or installed browsers persisting. Check `uptime` at the start of every turn.
+
+### [A] Reset #2 (2026-10-01 ~09:16Z) — same symptoms as #1
+Recovered in < 1 min with the same 4 commands. Lesson confirmed: the sandbox can be wiped on *every* user interruption.
+Keep each tool call short (< 2 min) and commit early; a long-running test that is interrupted takes its uncommitted edits with it.
+
+### [A/B] Editing code via python string replace / sed can silently produce invalid JS
+症状: `SyntaxError: Unexpected end of input` at boot, loader stuck. Build (`vite build`) failed but the old `dist/` kept being served,
+so the next browser test exercised *stale* code and reported a misleading "x is not a function".
+原因: inserted `// comment` mid-line; `npx vite build | tail -1` hid the error line.
+解決/再発防止: run `node --check file.js` after every scripted edit; check vite's exit status (`npx vite build >/tmp/b.log 2>&1 || { tail -30 /tmp/b.log; exit 1; }`);
+autosave now tags `[BROKEN]` commits.
