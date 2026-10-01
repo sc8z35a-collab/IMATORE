@@ -47,6 +47,7 @@ export class City {
     this.lampPos = [];
     this.buildingBoxes = [];
     this.R = rng(2026);
+    this.D = rng(4242);
   }
 
   build() {
@@ -67,7 +68,7 @@ export class City {
       shop: new THREE.MeshBasicMaterial({ map: shops.tex, color: new THREE.Color(1.25, 1.25, 1.25) }),
       // B-006: lit tenant windows on the 2F/3F band right above the shops (polygonOffset: sits on the facade plane)
       tenant: new THREE.MeshBasicMaterial({ map: this.tenants.tex, color: new THREE.Color(1.15, 1.15, 1.15), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
-      shutter: new THREE.MeshStandardMaterial({ map: shutterTexture(), roughness: 0.45, metalness: 0.6 }),
+      shutter: new THREE.MeshStandardMaterial({ map: (() => { const t = shutterTexture(); t.wrapS = THREE.RepeatWrapping; return t; })(), roughness: 0.45, metalness: 0.6 }),
       boxSign: new THREE.MeshBasicMaterial({ map: shops.tex, color: new THREE.Color(1.5, 1.5, 1.5) }),
       gutter: new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.5, metalness: 0.5 }),
       sign: new THREE.MeshBasicMaterial({ map: signs.tex, color: new THREE.Color(1.6, 1.6, 1.6) }),
@@ -157,7 +158,7 @@ export class City {
 
   // ---------- row buildings along avenue i, side ±1 ----------
   buildRow(b, i, side, signs, shops) {
-    const R = this.R;
+    const R = this.R, D = this.D; // D: decoration stream (keeps the building layout of R unchanged)
     const d = aveDir(i);
     const rot = yawFor(d.x, d.z);
     // front faces the road: facing vector = -side * rightNormal
@@ -193,7 +194,7 @@ export class City {
       // position quad: local origin bottom-left, so shift by -w/2 along local +X
       const lx = { x: Math.cos(faceYaw), z: -Math.sin(faceYaw) }; // local +X in world
       // ~14% of shops are closed for the night: rolled-down shutter (with its header sign still lit above)
-      const closed = R() < 0.14;
+      const closed = D() < 0.14;
       if (closed) {
         b.add('shop', quad(w - 0.4, GF * 0.28, [u0, v0 + 0.25 * 0.72, u0 + 0.25, v0 + 0.25]),
           mat(frontC.x - lx.x * (w / 2 - 0.2), CURB + GF * 0.72 - 0.3, frontC.z - lx.z * (w / 2 - 0.2), faceYaw));
@@ -210,20 +211,20 @@ export class City {
       }
       // awning or canopy band
       const front = { x: c.x + fx * depth / 2, z: c.z + fz * depth / 2 };
-      if (R() < 0.6) {
+      if (D() < 0.6) {
         const aw = box(w - 0.6, 0.12, 1.6);
-        b.add(R() < 0.3 ? 'awningRed' : 'awning', aw, mat(front.x + fx * 0.8, GF - 0.15, front.z + fz * 0.8, faceYaw, -0.18));
+        b.add(D() < 0.3 ? 'awningRed' : 'awning', aw, mat(front.x + fx * 0.8, GF - 0.15, front.z + fz * 0.8, faceYaw, -0.18));
       }
       // B-006: 2F (and sometimes 3F) tenant windows: lit lettering bays on the facade just above the shop.
       // Cells are 3.2 m wide = CELL_W, so they line up with the window grid of the facade texture.
       {
         const nb = Math.max(1, Math.floor((w - 0.6) / CELL_W));
         const x0 = -(nb * CELL_W) / 2;
-        const floors = H > 24 && R() < 0.45 ? 2 : 1;
+        const floors = H > 24 && D() < 0.45 ? 2 : 1;
         for (let f = 0; f < floors; f++) {
           for (let k = 0; k < nb; k++) {
-            if (R() < 0.3) continue; // vacant / dark bay
-            const cellT = (R() * 16) | 0;
+            if (D() < 0.3) continue; // vacant / dark bay
+            const cellT = (D() * 16) | 0;
             const tu = (cellT % 4) / 4, tv = 1 - (((cellT / 4) | 0) + 1) / 4;
             const ox = x0 + k * CELL_W;
             b.add('tenant', quad(CELL_W, FLOOR_H, [tu, tv, tu + 0.25, tv + 0.25]),
@@ -232,17 +233,17 @@ export class City {
         }
       }
       // horizontal box sign (横看板) cantilevered over the entrance on some shops
-      if (!closed && R() < 0.4) {
-        const cS = (R() * 16) | 0, su = (cS % 4) / 4, sv = 1 - (((cS / 4) | 0) + 1) / 4 + 0.25 * 0.72;
-        const bw2 = Math.min(w - 1, 4.5), off = (R() - 0.5) * (w - bw2 - 1);
+      if (!closed && D() < 0.4) {
+        const cS = (D() * 16) | 0, su = (cS % 4) / 4, sv = 1 - (((cS / 4) | 0) + 1) / 4 + 0.25 * 0.72;
+        const bw2 = Math.min(w - 1, 4.5), off = (D() - 0.5) * (w - bw2 - 1);
         const p = { x: front.x + lx.x * off + fx * 0.35, z: front.z + lx.z * off + fz * 0.35 };
         b.add('signBack', box(bw2 + 0.12, 0.82, 0.5), mat(p.x, CURB + GF + 0.02, p.z, faceYaw));
         b.add('boxSign', quad(bw2, 0.7, [su, sv, su + 0.25, sv + 0.25 * 0.28]),
           mat(p.x - lx.x * bw2 / 2 + fx * 0.26, CURB + GF + 0.08, p.z - lx.z * bw2 / 2 + fz * 0.26, faceYaw));
       }
       // drain pipe (雨樋) down one front corner + a utility meter box at its foot
-      if (R() < 0.6) {
-        const sgn = R() < 0.5 ? -1 : 1;
+      if (D() < 0.6) {
+        const sgn = D() < 0.5 ? -1 : 1;
         const gp = { x: front.x + lx.x * sgn * (w / 2 - 0.18) + fx * 0.1, z: front.z + lx.z * sgn * (w / 2 - 0.18) + fz * 0.1 };
         b.add('gutter', new THREE.CylinderGeometry(0.06, 0.06, H - GF, 6), mat(gp.x, CURB + GF + (H - GF) / 2, gp.z));
         for (let y = GF + 3; y < H - 1; y += 6) b.add('gutter', box(0.18, 0.06, 0.14), mat(gp.x - fx * 0.04, CURB + y, gp.z - fz * 0.04, faceYaw)); // brackets
