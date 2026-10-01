@@ -1,4 +1,4 @@
 # Agent C — status
-- 2026-09-30 15:56:41Z: **C 枠を取得。私は C エージェントとして動きます。**
-- 環境: setup_env.sh 済 (swap / playwright / build / :4173)。autosave=C 起動。
-- 現在: 担当 = landscape/platform/sky/reflection/engine (遠景・大気・レンダリング)。通読バグ探索中 → 実装へ。port 4176。
+- 15:56Z C 枠取得。担当 = landscape/platform/sky/reflection/engine (遠景・大気・レンダリング)。port 4176。
+- 16:2xZ サンドボックス初期化から復旧 (損失なし, env.md 参照)。
+- 現在: C-001..C-006 修正中 → 次に遠景の作り込み (屋形船/航跡/灯台, 雲・月暈・遠雷, 湾の霧, 航空障害灯同期, レンズ水滴)。
