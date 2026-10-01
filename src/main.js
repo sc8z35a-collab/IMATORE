@@ -172,6 +172,7 @@ async function boot() {
       else openItem(u.district, u.item);
     } else if (u.kind === 'district') openDistrict(u.district);
     else if (u.kind === 'top') openTop();
+    buzz(10);
   }
   function approachItem(di, ki, then) {
     const p = DISTRICTS[di].items[ki]._pos;
@@ -386,6 +387,39 @@ async function boot() {
   $('btn-settings').onclick = openSettings;
   $('ld-settings').onclick = (e) => { e.stopPropagation(); openSettings(); };
 
+  // ---------- zone banner (entering an avenue / terrace / the plaza) ----------
+  let zbT = 0;
+  function zoneBanner(z, zd) {
+    const el = $('zone-banner');
+    $('zb-k').textContent = z.terrace ? 'OBSERVATION TERRACE' : zd ? 'NOW ENTERING' : 'WELCOME TO';
+    $('zb-t').textContent = zd ? zd.name : 'CENTRAL PLAZA';
+    $('zb-s').textContent = z.terrace ? '展望テラス ・ 遠くのランドマークを眺めよう' : zd ? `${zd.jp} ／ ${zd.tagline}` : '今トレ タワー ・ TOP NOW';
+    el.style.setProperty('--zc', zd ? zd.color : '#27e0ff');
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    clearTimeout(zbT); zbT = setTimeout(() => el.classList.remove('on'), 2600);
+    buzz(6);
+  }
+  // ---------- compass tape (heading-up, N = world −Z) ----------
+  const CMP = (() => {
+    const marks = [];
+    for (let d = 0; d < 360; d += 15) {
+      const lbl = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' }[d];
+      marks.push(`<span style="left:${d * 2}px" class="${lbl ? (lbl.length === 1 ? 'c' : 'o') : 't'}">${lbl || ''}</span>`);
+    }
+    const one = marks.join('');
+    $('compass-in').innerHTML = `<div>${one}</div><div>${one}</div><div>${one}</div>`;
+    return { last: 1e9 };
+  })();
+  function compass(yaw) {
+    // heading in degrees clockwise from north: facing -Z at yaw 0, yaw grows counter-clockwise
+    let h = ((-yaw * 180) / Math.PI) % 360; if (h < 0) h += 360;
+    if (Math.abs(h - CMP.last) < 0.2) return;
+    CMP.last = h;
+    $('compass-in').style.transform = `translateX(${-(h * 2) - 720}px)`;
+  }
+  // light haptic tick (Android Chrome; iOS ignores navigator.vibrate)
+  function buzz(ms = 8) { try { navigator.vibrate?.(ms); } catch (e) { /* ignore */ } }
+
   // small transient notice (gyro unavailable, context restored, …)
   let toastT = 0;
   function toast(msg) {
@@ -414,6 +448,15 @@ async function boot() {
   const center = new THREE.Vector2(0, 0);
   let lastZone = '';
   let promptHit = null;
+  // landmarks you can "spot" from a terrace (look roughly toward them) -> prompt shows name + distance
+  const SIGHT = [['skytree', 'スカイツリー風 電波塔', '634m'], ['lattice', '東京タワー風 鉄塔', '333m'], ['wheel', '湾岸の大観覧車', '115m'], ['fuji', '富士山', '3776m']];
+  const _fwd = new THREE.Vector3();
+  function setPrompt(key, kTxt, tTxt, sTxt, color) {
+    if (promptHit === key) return;
+    promptHit = key;
+    $('prompt-k').textContent = kTxt; $('prompt-t').textContent = tTxt; $('prompt-s').textContent = sTxt;
+    $('prompt').style.setProperty('--pc', color || '#27e0ff');
+  }
   function updatePrompt() {
     const so = sheetOpen();
     document.body.classList.toggle('sheet-open', so);
@@ -423,20 +466,39 @@ async function boot() {
     const pr = $('prompt');
     if (hit && hit.distance < 16) {
       const u = hit.object.userData;
-      let t = '';
-      if (u.kind === 'item') t = DISTRICTS[u.district].items[u.item].title;
-      else if (u.kind === 'district') t = `${DISTRICTS[u.district].name} — ${DISTRICTS[u.district].jp}`;
-      else t = 'TOP NOW — 総合ランキング';
-      if (promptHit !== t) { $('prompt-t').textContent = t; promptHit = t; }
-      pr.classList.remove('hidden');
+      if (u.kind === 'item') {
+        const d = DISTRICTS[u.district], it = d.items[u.item];
+        setPrompt(`i${u.district}.${u.item}`, `${d.name} ・ ${it.date} ・ HEAT ${it.heat}`, it.title, 'タップで開く', d.color);
+      } else if (u.kind === 'district') {
+        const d = DISTRICTS[u.district];
+        setPrompt(`d${u.district}`, `${d.items.length} TRENDS`, `${d.name} — ${d.jp}`, 'タップでランキング', d.color);
+      } else setPrompt('top', 'CENTRAL TOWER', 'TOP NOW — 総合ランキング', 'タップで開く', '#27e0ff');
+      pr.classList.remove('hidden'); pr.classList.remove('info');
       $('crosshair').classList.add('hot');
-    } else {
-      pr.classList.add('hidden'); promptHit = null;
-      $('crosshair').classList.remove('hot');
+      return;
     }
+    $('crosshair').classList.remove('hot');
+    // terrace sightseeing: name the landmark in the centre of view (informational, not tappable)
+    if (zoneAt(controls.pos.x, controls.pos.z).terrace) {
+      camera.getWorldDirection(_fwd);
+      let best = null, bc = Math.cos(0.12);
+      for (const [key, name, h] of SIGHT) {
+        const L = LANDMARKS[key]; const dx = L.x - camera.position.x, dz = L.z - camera.position.z, dist = Math.hypot(dx, dz);
+        const c = (dx * _fwd.x + dz * _fwd.z) / (dist * Math.hypot(_fwd.x, _fwd.z) || 1);
+        if (c > bc) { bc = c; best = [key, name, h, dist]; }
+      }
+      if (best) {
+        const km = best[3] >= 1000 ? `${(best[3] / 1000).toFixed(1)} km` : `${Math.round(best[3])} m`;
+        setPrompt('L' + best[0], `LANDMARK ・ 高さ ${best[2]}`, best[1], `ここから約 ${km}`, '#ffd27a');
+        pr.classList.remove('hidden'); pr.classList.add('info');
+        return;
+      }
+    }
+    pr.classList.add('hidden'); promptHit = null;
   }
   $('prompt').style.pointerEvents = 'auto';
   $('prompt').addEventListener('click', () => {
+    if ($('prompt').classList.contains('info')) return;
     ray.setFromCamera(center, camera);
     const hit = ray.intersectObjects(pickables, false)[0];
     if (hit && hit.distance < 16) openHit(hit.object.userData, hit.distance);
@@ -512,7 +574,8 @@ async function boot() {
       const zd = z.d >= 0 ? DISTRICTS[z.d] : null;
       mapUI.drawMini(controls.pos, controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0), { label: z.terrace ? 'TERRACE' : zd ? zd.name : 'PLAZA', color: zd ? zd.color : '#27e0ff' });
       if (!$('map').classList.contains('hidden') && frame % 6 === 0) { mapUI.player = { x: controls.pos.x, z: controls.pos.z, yaw: controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0) }; mapUI.drawFull(t); }
-      if (z.name !== lastZone) { $('zone').textContent = z.name; lastZone = z.name; audio.zone(z.d); }
+      if (z.name !== lastZone) { $('zone').textContent = z.name; if (lastZone) zoneBanner(z, zd); lastZone = z.name; audio.zone(z.d); }
+      compass(controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0));
       updatePrompt();
       audio.update(controls.pos, controls.vel.length(), dt * 3);
     }
