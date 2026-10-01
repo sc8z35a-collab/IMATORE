@@ -68,8 +68,16 @@ function leafTexture() {
   // twigs (visible in the colour map only where alpha survives)
   g.strokeStyle = 'rgba(40,30,22,.9)'; g.lineWidth = 3;
   for (let k = 0; k < 6; k++) { const t = L() * 6.28; g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + Math.cos(t) * S * 0.3, S / 2 + Math.sin(t) * S * 0.3); g.stroke(); }
+  // colour: darken toward the card rim (outer leaves are the ones isolated by alphaTest; bright ones read as speckles)
+  const rim = g.createRadialGradient(S / 2, S / 2, S * 0.2, S / 2, S / 2, S * 0.5);
+  rim.addColorStop(0, 'rgba(0,0,0,0)'); rim.addColorStop(1, 'rgba(4,10,6,.7)');
+  g.fillStyle = rim; g.fillRect(0, 0, S, S);
+  // alpha: blur so the alphaTest boundary forms contiguous lobes instead of 1-pixel islands at distance
+  const al2 = document.createElement('canvas'); al2.width = al2.height = S;
+  const a2 = al2.getContext('2d');
+  if ('filter' in a2) { a2.filter = 'blur(4px)'; a2.drawImage(al, 0, 0); a2.filter = 'none'; } else a2.drawImage(al, 0, 0);
   const mk = (c, srgb) => { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, Q.anisotropy || 8); t.generateMipmaps = true; return t; };
-  return { map: mk(col, true), alphaMap: mk(al, false) };
+  return { map: mk(col, true), alphaMap: mk(al2, false) };
 }
 function makeTree() {
   if (_tree) return _tree;
