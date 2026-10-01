@@ -186,6 +186,16 @@ const VISTAS = [
 ];
 function vistaCap(x, z) {
   let cap = Infinity;
+  // bay vista (avenue 4 faces due south over Tokyo Bay): keep the waterfront district low so the water,
+  // the bridge and the boats read from the terrace. Tall buildings stand back on either side (a framed view).
+  if (z > 200) {
+    const lat = Math.abs(x), half = z * 0.42 + 30;
+    if (lat < half * 1.5) {
+      const k = Math.min(1, Math.max(0, (lat - half) / (half * 0.5)));
+      const line = VISTA_EYE_Y - 2 + (z - 205) * 0.004;          // ~0.2° below the horizon line
+      cap = Math.min(cap, Math.max(8, line) + k * 300);
+    }
+  }
   for (const v of VISTAS) {
     const L = LANDMARKS[v.key], D = Math.hypot(L.x, L.z), ux = L.x / D, uz = L.z / D;
     const along = x * ux + z * uz;
@@ -936,8 +946,143 @@ Object.assign(Landscape.prototype, {
       ships.push(p);
     }
     if (shipParts.length) this.group.add(Object.assign(new THREE.Mesh(merge(shipParts), hazeLit(0x2a2e36)), { name: 'ships' }));
-    // a lit cruise ship / yakatabune near the bridge
     this.portLights = lights;
+    this.buildBoats();
+  },
+
+  // ---------------------------------------------------------------- C-004: living bay — yakatabune, ferries, wakes, lighthouse
+  // Boats are CPU-animated groups (only ~20 of them) moving along closed loops inside the bay. Each one gets
+  // a V-shaped additive wake ribbon on the water (shader: foam fading with age along the ribbon) and its
+  // lights are part of the boat group so they move with it.
+  buildBoats() {
+    const R = this.R;
+    const boats = [];
+    // shared wake material: uv.x = across (0..1), uv.y = age along the trail (0 at the stern)
+    const wakeMat = new THREE.ShaderMaterial({
+      uniforms: LU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: /* glsl */ `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`,
+      fragmentShader: /* glsl */ `varying vec2 vUv; varying vec3 vW; ${HAZE_GLSL} ${NOISE_GLSL}
+        void main(){
+          float age = 1.0 - vUv.y, across = abs(vUv.x - 0.5) * 2.0;
+          // two foam arms of the Kelvin wake + a turbulent centre trail
+          float arm = exp(-pow((across - mix(0.15, 0.95, age)) / (0.05 + age * 0.12), 2.0));
+          float centre = exp(-across * across * 30.0) * (1.0 - age);
+          float foam = (arm * 0.8 + centre) * (0.55 + 0.45 * vn(vW.xz * 0.35 + uTime * 0.6));
+          float a = foam * pow(1.0 - age, 1.6);
+          vec3 c = vec3(0.55, 0.62, 0.75) * a * 0.55;
+          float d = length(vW - cameraPosition);
+          c *= exp(-d * uHazeDen * 0.8);
+          gl_FragColor = vec4(c, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
+    const wakeGeo = new THREE.PlaneGeometry(1, 1, 1, 8); wakeGeo.rotateX(-Math.PI / 2); wakeGeo.translate(0, 0, 0.5); // +Z = astern
+    const hullMat = hazeLit(0x1d2028), cabinMat = hazeLit(0x2a2d34);
+    const make = (kind) => {
+      const g = new THREE.Group();
+      const parts = [], lights = [];
+      let len, wakeW, wakeL, speed;
+      if (kind === 'yakata') {
+        // 屋形船: long low hull, lit paper-window cabin, red lanterns along the eaves
+        len = 24; wakeW = 7; wakeL = 55; speed = 2.2 + R() * 1.2;
+        parts.push(boxAt(4.6, 1.4, len, 0, -0.8, 0));
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.2, len * 0.72), hazeBasic(0xffc88a, 1.25)); cab.position.set(0, 1.7, 0.6); g.add(cab);
+        const roof = new THREE.BoxGeometry(4.8, 0.35, len * 0.8); roof.translate(0, 2.95, 0.6); parts.push(roof);
+        for (let k = 0; k < 9; k++) for (const sd of [-1, 1]) lights.push({ x: sd * 2.45, y: 2.6, z: -len * 0.32 + k * len * 0.08, c: [2.6, 0.35, 0.12], s: 0.9 });
+      } else if (kind === 'ferry') {
+        len = 70; wakeW = 16; wakeL = 180; speed = 6 + R() * 2;
+        parts.push(boxAt(12, 4, len, 0, -2.5, 0), boxAt(10, 6, len * 0.55, 0, 1.5, -2), boxAt(4, 4, 6, 0, 7.5, -8));
+        const win = new THREE.Mesh(new THREE.BoxGeometry(10.15, 1.1, len * 0.52), hazeBasic(0xe8f2ff, 1.5)); win.position.set(0, 3.6, -2); g.add(win);
+        const win2 = new THREE.Mesh(new THREE.BoxGeometry(12.1, 0.7, len * 0.9), hazeBasic(0xffd9a0, 1.1)); win2.position.set(0, 0.2, 0); g.add(win2);
+        lights.push({ x: 0, y: 12, z: -8, c: [2.4, 2.4, 2.6], s: 1.8 }, { x: -6, y: 2.5, z: -len * 0.45, c: [2.6, 0.1, 0.05], s: 1.4 }, { x: 6, y: 2.5, z: -len * 0.45, c: [0.1, 2.6, 0.4], s: 1.4 });
+      } else {
+        // small tug / patrol boat with a white masthead light and searchlight glow
+        len = 14; wakeW = 6; wakeL = 70; speed = 5 + R() * 3;
+        parts.push(boxAt(4, 1.6, len, 0, -1, 0), boxAt(3, 2.4, 4, 0, 0.6, -1));
+        lights.push({ x: 0, y: 5.5, z: -1, c: [2.4, 2.4, 2.6], s: 1.2 }, { x: -2, y: 1.2, z: -len * 0.45, c: [2.6, 0.1, 0.05], s: 0.9 }, { x: 2, y: 1.2, z: -len * 0.45, c: [0.1, 2.6, 0.4], s: 0.9 });
+      }
+      g.add(new THREE.Mesh(merge(parts), kind === 'yakata' ? cabinMat : hullMat));
+      const pts = new THREE.Points(pointsGeo(lights), pointsMaterial()); pts.frustumCulled = false; g.add(pts);
+      const wake = new THREE.Mesh(wakeGeo, wakeMat); wake.scale.set(wakeW, 1, wakeL); wake.position.set(0, 0.25 - (WY - WY), len * 0.45); wake.renderOrder = 1; wake.frustumCulled = false;
+      g.add(wake);
+      // light on the water under/behind the boat (warm smear)
+      return { g, len, speed };
+    };
+    // loops: ellipses inside the bay (bay coords), checked to stay on water
+    const plans = [
+      ...Array.from({ length: 7 }, (_, k) => ({ kind: 'yakata', a: 1000 + R() * 500, b: 260 + R() * 260, ca: 1150 + R() * 300, cl: (R() - 0.5) * 500 })),
+      ...Array.from({ length: 3 }, () => ({ kind: 'ferry', a: 1400 + R() * 1200, b: 600 + R() * 500, ca: 2400 + R() * 900, cl: (R() - 0.5) * 900 })),
+      ...Array.from({ length: 5 }, () => ({ kind: 'tug', a: 500 + R() * 700, b: 300 + R() * 400, ca: 1600 + R() * 1500, cl: (R() - 0.5) * 1200 })),
+    ];
+    // keep only loops that stay on open water all the way round (re-roll the centre a few times)
+    const loopOK = (pl) => { for (let k = 0; k < 48; k++) { const a = (k / 48) * TAU; const q = bayPoint(pl.ca + Math.cos(a) * pl.a * 0.45, pl.cl + Math.sin(a) * pl.b * 1.6); if (waterDepth(q.x, q.z) < 30) return false; } return true; };
+    for (const pl of plans) {
+      let ok = loopOK(pl);
+      for (let k = 0; k < 12 && !ok; k++) { pl.ca += 150; pl.cl *= 0.7; pl.b *= 0.85; ok = loopOK(pl); }
+      if (!ok) continue;
+      const b = make(pl.kind);
+      b.g.position.y = WY;
+      this.group.add(b.g);
+      this.reflHide.push(b.g);
+      const circ = Math.PI * (pl.a + pl.b);
+      boats.push({ ...b, pl, ph: R() * TAU, dir: R() < 0.5 ? 1 : -1, w: (b.speed / circ) * TAU });
+    }
+    const P = new THREE.Vector2();
+    const pos = (bt, t, out) => {
+      const a = bt.ph + t * bt.w * bt.dir;
+      // squash the ellipse along "along" so it hugs the curved shoreline less aggressively
+      const along = bt.pl.ca + Math.cos(a) * bt.pl.a * 0.45, lat = bt.pl.cl + Math.sin(a) * bt.pl.b * 1.6;
+      const p = bayPoint(along, lat); out.set(p.x, p.z); return out;
+    };
+    const Q2 = new THREE.Vector2();
+    this.movers.push((t) => {
+      for (const bt of boats) {
+        pos(bt, t, P); pos(bt, t + 2, Q2);
+        bt.g.position.x = P.x; bt.g.position.z = P.y;
+        // bow toward the direction of travel (local -Z forward, wake trails along +Z)
+        bt.g.rotation.y = Math.atan2(-(Q2.x - P.x), -(Q2.y - P.y));
+        bt.g.position.y = WY + Math.sin(t * 0.9 + bt.ph * 3) * 0.12;
+        bt.g.rotation.z = Math.sin(t * 0.7 + bt.ph) * 0.015;
+      }
+    });
+    this.boats = boats;
+
+    // lighthouse on the breakwater at the bay mouth side of the port: rotating twin beam + lantern
+    // stand it at the tip of a breakwater just off the shore, west of the container cranes (search a water spot)
+    let lhP = null;
+    for (let along = 0; along < 400 && !lhP; along += 10) {
+      const lat = -260, q = bayPoint(COAST0 + (lat * lat) / 1400 + coastNoise(lat) + 60 + along, lat);
+      if (waterDepth(q.x, q.z) > 50) lhP = q;
+    }
+    lhP = lhP || bayPoint(1200, -260);
+    const lh = new THREE.Group(); lh.position.set(lhP.x, WY, lhP.z);
+    const towerG = new THREE.CylinderGeometry(2.2, 3.4, 30, 16); towerG.translate(0, 15, 0);
+    lh.add(new THREE.Mesh(towerG, hazeLit(0xe8e8e8, { stripes: 7.5 })));
+    const breakwater = boxAt(9, 3, 260, 0, -1.2, -120); lh.add(new THREE.Mesh(breakwater, hazeLit(0x55585e)));
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 2.4, 12), hazeBasic(0xfff3c4, 3.2)); lamp.position.y = 31.4; lh.add(lamp);
+    const bwL = []; for (let k = 0; k < 14; k++) bwL.push({ x: 0, y: 2.6, z: -k * 19, c: [1.9, 1.3, 0.6], s: 1.4 });
+    bwL.push({ x: 0, y: 31.5, z: 0, c: [3, 2.8, 2.2], s: 7, b: [0, 0.125, 0.18, 2.5] }); // flash every 8 s, in sync with the beam
+    const bwp = new THREE.Points(pointsGeo(bwL), pointsMaterial()); bwp.frustumCulled = false; lh.add(bwp);
+    const beamGeo = new THREE.CylinderGeometry(0.6, 26, 900, 12, 1, true); beamGeo.translate(0, 450, 0); beamGeo.rotateZ(-Math.PI / 2 + 0.03);
+    const beamMat = new THREE.ShaderMaterial({
+      uniforms: LU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      vertexShader: /* glsl */ `varying vec2 vUv; varying vec3 vW; varying vec3 vN; void main(){ vUv = uv; vN = normalize(mat3(modelMatrix)*normal); vec4 wp = modelMatrix*vec4(position,1.0); vW = wp.xyz; gl_Position = projectionMatrix*viewMatrix*wp; }`,
+      fragmentShader: /* glsl */ `varying vec2 vUv; varying vec3 vW; varying vec3 vN;
+        void main(){ vec3 V = normalize(cameraPosition - vW); float core = pow(abs(dot(normalize(vN), V)), 1.5);
+          float fall = pow(1.0 - vUv.y, 2.2); gl_FragColor = vec4(vec3(1.0, 0.95, 0.8) * core * fall * 0.07, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
+    const beams = new THREE.Group(); beams.position.y = 31.4;
+    for (const r of [0, Math.PI]) { const m = new THREE.Mesh(beamGeo, beamMat); m.rotation.y = r; m.frustumCulled = false; beams.add(m); }
+    lh.add(beams);
+    lh.name = 'lighthouse';
+    this.group.add(lh);
+    this.reflHide.push(lh);
+    // beam period 16 s, two beams -> a sweep past any viewer every 8 s (matches the lantern flash rate)
+    this.movers.push((t) => { beams.rotation.y = (t / 16) * TAU; });
   },
 
   // ---------------------------------------------------------------- landmarks
