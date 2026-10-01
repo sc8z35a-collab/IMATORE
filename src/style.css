@@ -261,3 +261,17 @@ body.sheet-open #zone-banner, body.sheet-open #compass { opacity: 0; }
   #compass-in { left: 90px; }
   #zone-banner b { font-size: 24px; }
 }
+
+/* ---------- guide cards (detail pass) ---------- */
+.g-item { --gc: #27e0ff; transition: transform .12s, border-color .2s; }
+.g-item:active { transform: scale(.97); }
+.g-item b span { font-family: 'Noto Sans JP', sans-serif; font-size: 10px; letter-spacing: 0; color: rgba(255,255,255,.75); margin-left: 4px; }
+.g-item small { margin-top: 2px; }
+.g-item u { display: block; height: 2px; margin-top: 5px; border-radius: 1px; background: rgba(255,255,255,.14); overflow: hidden; text-decoration: none; }
+.g-item u s { display: block; height: 100%; background: linear-gradient(90deg, var(--gc), #fff); }
+.g-no { position: absolute; z-index: 1; top: 8px; left: 10px; font-family: Orbitron, sans-serif; font-size: 8.5px; letter-spacing: .14em;
+  padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.55); color: rgba(255,255,255,.8); }
+.g-here { display: none; position: absolute; z-index: 1; top: 8px; right: 10px; font-style: normal; font-family: Orbitron, sans-serif; font-size: 8px;
+  letter-spacing: .14em; padding: 2px 6px; border-radius: 6px; background: var(--gc, #27e0ff); color: #000; font-weight: 700; }
+.g-item.here { border-color: var(--gc, #27e0ff); box-shadow: 0 0 0 1px var(--gc, #27e0ff) inset, 0 0 18px color-mix(in srgb, var(--gc, #27e0ff) 35%, transparent); }
+.g-item.here .g-here { display: block; }

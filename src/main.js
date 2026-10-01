@@ -193,7 +193,7 @@ async function boot() {
   const SHEETS = ['guide', 'detail', 'map', 'settings'];
   function sheetOpen() { return SHEETS.some((id) => !$(id).classList.contains('hidden')); }
   function closeSheets() { SHEETS.forEach((id) => $(id).classList.add('hidden')); }
-  function toggleGuide() { ['detail', 'map', 'settings'].forEach((id) => $(id).classList.add('hidden')); $('guide').classList.toggle('hidden'); $('guide').scrollTop = 0; audio.blip(880); }
+  function toggleGuide() { ['detail', 'map', 'settings'].forEach((id) => $(id).classList.add('hidden')); $('guide').classList.toggle('hidden'); $('guide').scrollTop = 0; markGuideHere(); audio.blip(880); }
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => $(b.dataset.close).classList.add('hidden')));
   $('btn-guide').onclick = toggleGuide;
   window.addEventListener('keydown', (e) => {
@@ -299,15 +299,25 @@ async function boot() {
 
   function buildGuide() {
     const root = $('guide-list');
-    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:${cssUrl('/img/moon_skyline.jpg')}"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW</small></div></div>` +
+    root.innerHTML = `<div class="g-item g-plaza" data-home="1" style="background-image:${cssUrl('/img/moon_skyline.jpg')}"><i style="background:linear-gradient(90deg,#27e0ff,#ff4fd8,#ffe14f)"></i><div><b>CENTRAL PLAZA</b><small>今トレ タワー ・ TOP NOW #1 ${esc(TOP_NOW[0]?.t || '')}</small></div><em class="g-here">YOU ARE HERE</em></div>` +
       DISTRICTS.map((d, i) => {
         const top = [...d.items].sort((a, b) => b.heat - a.heat)[0];
-        return `<div class="g-item" data-i="${i}" style="background-image:${cssUrl(d.img)}"><i style="background:${d.color}"></i><div><b style="color:${d.color}">${esc(d.name)}</b><small>${esc(top ? top.title : d.jp)}</small></div></div>`;
+        const heat = Math.max(0, Math.min(100, +(top && top.heat) || 0));
+        return `<div class="g-item" data-i="${i}" style="--gc:${d.color};background-image:${cssUrl(d.img)}"><i style="background:${d.color}"></i>` +
+          `<span class="g-no">${String(i + 1).padStart(2, '0')} ・ ${d.items.length} TRENDS</span>` +
+          `<div><b style="color:${d.color}">${esc(d.name)} <span>${esc(d.jp)}</span></b><small>▲${heat} ${esc(top ? top.title : d.tagline)}</small>` +
+          `<u><s style="width:${heat}%"></s></u></div><em class="g-here">YOU ARE HERE</em></div>`;
       }).join('');
     root.querySelectorAll('.g-item').forEach((el) => el.addEventListener('click', () => {
       $('guide').classList.add('hidden');
+      buzz(8);
       if (el.dataset.home) warpHome(); else warpToDistrict(+el.dataset.i);
     }));
+  }
+  // mark the card of the zone the player is in (called whenever the guide opens)
+  function markGuideHere() {
+    const z = zoneAt(controls.pos.x, controls.pos.z);
+    $('guide-list').querySelectorAll('.g-item').forEach((el) => el.classList.toggle('here', z.d < 0 ? !!el.dataset.home : el.dataset.i === String(z.d)));
   }
 
   // ---------- map (renewed): heading-up minimap + full-screen HUB / AREA map ----------
