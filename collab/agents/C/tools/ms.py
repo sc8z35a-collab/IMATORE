@@ -28,7 +28,7 @@ async def main():
         if 'loader' in opt:
             await pg.screenshot(path=f'{prefix}_loader.png')
         await pg.evaluate("Element.prototype.requestFullscreen = undefined; document.getElementById('enter').click()")
-        await pg.wait_for_timeout(4500)
+        await pg.wait_for_timeout(9000)  # intro fly-in takes ~7 s at fps=1
         for i, js in enumerate(views):
             if js: await pg.evaluate(js)
             await pg.wait_for_timeout(int(wait * 1000))
