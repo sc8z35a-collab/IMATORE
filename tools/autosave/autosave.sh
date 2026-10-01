@@ -66,7 +66,13 @@ save_once() {
     local files cnt
     files=$(git diff --cached --name-only | head -8 | tr '\n' ' ')
     cnt=$(git diff --cached --name-only | wc -l)
-    git commit -q -m "wip(autosave/$AGENT): $(date -u '+%F %T')Z — ${cnt} files: ${files}" && log "committed $cnt files"
+    # syntax gate (B's proposal): still commit (never lose work) but tag it so nobody pulls a broken build blindly
+    local bad="" f
+    for f in $(git diff --cached --name-only --diff-filter=AM | grep -E '\.(m?js)$'); do
+      [ -f "$f" ] && ! node --check "$f" >/dev/null 2>&1 && bad="$bad $f"
+    done
+    local tag=""; [ -n "$bad" ] && tag="[BROKEN:$bad ] " && log "ALERT: syntax error in$bad (committed with [BROKEN] tag)" && echo "ALERT $(date -u '+%F %T')Z [$AGENT] syntax error in$bad" >> "$INBOX"
+    git commit -q -m "wip(autosave/$AGENT): ${tag}$(date -u '+%F %T')Z — ${cnt} files: ${files}" && log "committed $cnt files"
   fi
   local before; before=$(git rev-parse HEAD)
   if ! timeout 90 git fetch -q origin "$BRANCH" 2>>"$LOG"; then log "fetch failed (network?)"; return 0; fi
