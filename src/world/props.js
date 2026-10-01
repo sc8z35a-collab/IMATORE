@@ -6,6 +6,7 @@ import {
 } from './layout.js';
 import { glow } from './materials.js';
 import { Q } from '../settings.js';
+import { QA } from '../util/qa.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
 function M4(x, y, z, ry = 0, s = 1) { _e.set(0, ry, 0); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(s, s, s); return _m.compose(_p, _q, _s).clone(); }
@@ -126,7 +127,11 @@ function makeTree() {
   const lt = leafTexture();
   const leafMat = new THREE.MeshStandardMaterial({
     map: lt.map, alphaMap: lt.alphaMap, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0,
-    color: 0x9fb4a2, envMapIntensity: 0.25, alphaToCoverage: true,
+    color: 0x9fb4a2, envMapIntensity: 0.25,
+    // B-005: alphaToCoverage without a multisampled target (QA / 超軽量: no MSAA RT, and the default canvas has
+    // antialias:false) dithers the card edges into bright single-pixel speckles that bloom ("white noise" crowns).
+    // Plain alphaTest on the blurred alpha map gives clean, stable lobes on every preset.
+    alphaToCoverage: !QA && Q.post && Q.msaa > 0,
   });
   const barkMat = new THREE.MeshStandardMaterial({ color: 0x3a3029, roughness: 0.92, envMapIntensity: 0.3 });
   _tree = { trunkGeo, leafGeo, leafMat, barkMat };
