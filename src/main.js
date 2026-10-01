@@ -25,11 +25,28 @@ const cssUrl = (u) => `url(&quot;${esc(asset(u)).replace(/[()]/g, (c) => '%' + c
 const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.matchMedia('(pointer:coarse)').matches);
 if (!isMobile) document.body.classList.add('desktop');
 $('ld-date').textContent = AS_OF;
+// loader: 8 district colour pips (light up with progress) + rotating tips
+$('ld-dist').innerHTML = DISTRICTS.map((d) => `<i style="--c:${d.color}" title="${esc(d.name)}"></i>`).join('');
+const TIPS = [
+  '左半分をドラッグで移動、右半分をドラッグで視点。端末に向かってタップで記事を開けます',
+  '☰ ガイドから 8 つの通りへワープ。MAP の AREA タブでランドマークを選ぶと展望テラスへ',
+  '通りの突き当たりは展望テラス。スカイツリー・東京タワー・富士山の方向を向くと名前と距離が出ます',
+  '2 本指でピンチするとズーム。GYRO をオンにすると端末の傾きで見回せます',
+  '重いと感じたら ⚙ 設定 → 超軽量モード (影・反射・ポストエフェクトを省略、30fps)',
+  'イヤホン推奨: 雨音、濡れた足音、横断歩道の誘導音、遠くの電車が聞こえます',
+];
+let tipI = Math.floor(Math.random() * TIPS.length);
+// swap text directly + replay a CSS fade (no hidden gap: a delayed timer on a busy main thread left the tip blank)
+const tipTimer = setInterval(() => { const el = $('ld-tip'); if (!el) return clearInterval(tipTimer); el.textContent = TIPS[tipI++ % TIPS.length]; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }, 4200);
+$('ld-tip').textContent = TIPS[tipI++ % TIPS.length]; $('ld-tip').classList.add('on');
 $('asof').textContent = AS_OF;
 
 const T0 = performance.now();
 const setMsg = (m) => { $('ld-msg').textContent = m; console.log(`[boot ${((performance.now() - T0) / 1000).toFixed(1)}s] ${m}`); };
-const setProg = (p) => ($('ld-fill').style.width = `${Math.round(p * 100)}%`);
+const setProg = (p) => {
+  $('ld-fill').style.width = `${Math.round(p * 100)}%`;
+  document.querySelectorAll('#ld-dist i').forEach((el, k, all) => el.classList.toggle('on', p >= (k + 0.5) / all.length));
+};
 
 async function boot() {
   // make sure web fonts are ready before rasterising canvas textures

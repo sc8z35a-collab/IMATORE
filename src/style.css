@@ -278,3 +278,24 @@ body.sheet-open #zone-banner, body.sheet-open #compass { opacity: 0; }
 .g-item.here .g-no { display: none; }
 .g-here { left: 10px; right: auto; }
 .g-item b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- loader detail ---------- */
+.ld-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.ld-city { position: absolute; left: -2%; right: -2%; bottom: 0; width: 104%; height: 26vh; fill: #04040a; opacity: .95;
+  filter: drop-shadow(0 -2px 12px rgba(255,79,216,.18)); }
+.ld-moon { position: absolute; right: 14%; top: 12%; width: 54px; height: 54px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #fff 0%, #e9eefc 40%, #b8c3e0 70%, #8f9ac0 100%);
+  box-shadow: 0 0 40px 12px rgba(190,205,255,.25), 0 0 120px 40px rgba(140,160,255,.12); }
+.ld-inner { position: relative; z-index: 1; }
+.ld-dist { display: flex; justify-content: center; gap: 6px; margin: 10px 0 0; }
+.ld-dist i { width: 18px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); transition: background .4s, box-shadow .4s; }
+.ld-dist i.on { background: var(--c); box-shadow: 0 0 8px var(--c); }
+.ld-tip { min-height: 2.8em; margin: 12px auto 0; max-width: 420px; font-size: 11px; line-height: 1.55; color: rgba(234,246,255,.7); }
+.ld-tip.on { animation: tipin .5s ease both; }
+@keyframes tipin { from { opacity: 0; transform: translateY(3px); } }
+.ld-tip::before { content: 'TIP  '; font-family: Orbitron, sans-serif; font-size: 9px; letter-spacing: .2em; color: var(--cyan); }
+@media (orientation: landscape) and (max-height: 500px) {
+  .ld-tip { margin-top: 8px; min-height: 2.6em; }
+  .ld-moon { width: 40px; height: 40px; top: 10%; }
+  .ld-city { height: 22vh; }
+}
