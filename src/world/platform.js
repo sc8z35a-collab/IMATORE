@@ -139,9 +139,12 @@ export class Platform {
         g.rotateY(Math.atan2(b.x - a.x, b.z - a.z)); g.translate((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
         stripG.push(g);
       }
-      // the prow tip: a tall slim light mast (beacon)
-      const tip = avePoint(i, EDGE - 1.2, 0);
-      lights.push({ x: tip.x, y: CURB + 9.5, z: tip.z, c: [2.2, 2.4, 2.8], s: 0.8 });
+      // the prow: twin slim light masts (beacons) flanking the view axis. C-007: a single mast used to stand
+      // exactly on the axis, i.e. dead centre of the landmark vista, and hid the slim Skytree completely.
+      for (const s of [-1, 1]) {
+        const tip = avePoint(i, EDGE - 2.2, s * 1.5);
+        lights.push({ x: tip.x, y: CURB + 9.5, z: tip.z, c: [2.2, 2.4, 2.8], s: 0.8 });
+      }
       // light fins cascading down the wall below the prow (seen from far away as vertical light lines)
       for (let y = GY + 1; y < 0; y += 1.4) {
         for (const s of [-2, 0, 2]) {
@@ -152,10 +155,12 @@ export class Platform {
     }
     const mast = [];
     for (let i = 0; i < N_AVE; i++) {
-      const tip = avePoint(i, EDGE - 1.2, 0);
-      const g = new THREE.CylinderGeometry(0.05, 0.09, 9.4, 8); g.translate(tip.x, CURB + 4.7, tip.z);
-      mast.push(g);
-      addObstacle(tip.x, tip.z, 0.25);
+      for (const s of [-1, 1]) {
+        const tip = avePoint(i, EDGE - 2.2, s * 1.5);
+        const g = new THREE.CylinderGeometry(0.05, 0.09, 9.4, 8); g.translate(tip.x, CURB + 4.7, tip.z);
+        mast.push(g);
+        addObstacle(tip.x, tip.z, 0.25);
+      }
     }
     this.group.add(new THREE.Mesh(mergeGeometries(mast), this.M.chrome));
     const benchM = new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.55 });
