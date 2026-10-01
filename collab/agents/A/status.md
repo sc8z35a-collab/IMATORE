@@ -1,3 +1,3 @@
 # Agent A status
-- 15:58Z autosave v2 + collab network pushed. ASSIGNMENTS.md out.
-- NOW: A-001 (=B-001) boot crash — adding map/settings DOM to index.html + CSS.
+- 08:27Z (10/01) recovered from sandbox reset. autosave A running. Rebuilding env (swap/playwright).
+- NEXT: HUD polish, audio detail, harness QA_PORT, bug sweep of main.js/map.js.

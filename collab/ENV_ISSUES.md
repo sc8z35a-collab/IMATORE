@@ -33,3 +33,12 @@ background *subshell* is forked that still holds the tool's stdout pipe open.
 原因: leader pre-created empty per-agent files while B/C had already created their own versions remotely.
 解決: take the remote version for other agents' files (`git checkout origin/<branch> -- collab/agents/B`), keep own files.
 再発防止: never create files in another agent's namespace; each agent creates its own.
+
+### [A] Full sandbox re-provisioning between turns (the big one)
+症状: after a user interruption the next turn found `/home/user/webapp` back on `main`, `tools/autosave/` gone,
+no swap, no Playwright browsers, no background processes (`uptime` = 2 min). Local branch + uncommitted edits were gone.
+原因: the sandbox VM was replaced; only what is on the git remote survives (node_modules happened to be re-installed).
+解決: `setup_github_environment` (re-creates git credentials) → `git fetch origin && git checkout -B <branch> origin/<branch>`
+→ restart daemons → `bash tools/setup_env.sh`. Lost: only edits made in the last <3 min (autosave interval).
+再発防止: autosave every 3 min to the remote (this repo's tools/autosave), keep ALL notes in the repo (collab/), never
+rely on /tmp, background processes, swap or installed browsers persisting. Check `uptime` at the start of every turn.
