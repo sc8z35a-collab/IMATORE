@@ -1023,8 +1023,12 @@ Object.assign(Landscape.prototype, {
           float band = 0.5 + 0.5 * sin(vL.y * 0.02 - uTime * 0.25);
           vec3 iki = vec3(0.45, 0.8, 1.6), miyabi = vec3(1.1, 0.35, 1.5);
           vec3 c = mix(iki, miyabi, smoothstep(0.55, 0.9, band));
-          vec3 col = vec3(0.02, 0.025, 0.04) + c * (0.18 + line * 1.1);
-          gl_FragColor = vec4(applyHaze(col, vW), 1.0);
+          // floodlit from inside: brighter toward the base of each band, the lattice glowing on top
+          float flood = 0.55 + 0.45 * smoothstep(0.0, 360.0, vL.y);
+          vec3 col = vec3(0.02, 0.025, 0.04) + c * (0.42 + line * 1.9) * flood;
+          // emissive landmarks punch through the aerial haze much more than unlit facades
+          vec3 hz = applyHaze(col, vW);
+          gl_FragColor = vec4(mix(hz, col, 0.55), 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -1033,7 +1037,7 @@ Object.assign(Landscape.prototype, {
     g.position.set(L.x, GY, L.z);
     g.add(new THREE.Mesh(shaft, mat));
     // observation decks (lit glass rings)
-    const ringMat = hazeBasic(0xdff2ff, 2.2);
+    const ringMat = hazeBasic(0xdff2ff, 3.4);
     for (const [y, r, h] of [[340, 20, 14], [445, 12, 7]]) {
       const ring = new THREE.CylinderGeometry(r, r * 0.92, h, 36, 1, true);
       ring.translate(0, y, 0);
@@ -1042,7 +1046,7 @@ Object.assign(Landscape.prototype, {
       g.add(new THREE.Mesh(cap, hazeLit(0x6a7080)));
     }
     const ant = new THREE.CylinderGeometry(1.2, 3.6, H - 495, 10); ant.translate(0, 495 + (H - 495) / 2, 0);
-    g.add(new THREE.Mesh(ant, hazeBasic(0xcfe8ff, 1.3)));
+    g.add(new THREE.Mesh(ant, hazeBasic(0xcfe8ff, 2.2)));
     g.name = 'skytree';
     this.group.add(g);
     this.landmarkLights.push({ x: L.x, y: GY + H + 2, z: L.z, c: [3, 0.1, 0.05], s: 6, b: [0.2, 0.5, 0.5, 2.5] });
