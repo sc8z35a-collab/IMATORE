@@ -576,7 +576,7 @@ async function boot() {
     land.update(t, dt, camera.position);
     refl.uniforms.uTime.value = t;
     if (!QA_OFF.screens) screens.update(t, dt, camera.position);
-    kiosks.update(t, dt);
+    kiosks.update(t, dt, controls.enabled ? controls.pos : null);
     props.update(t);
     life.update(t, camera, scene);
     if (marker.visible) { markerT += dt; marker.scale.setScalar(1 + markerT * 3); marker.material.opacity = Math.max(0, 1 - markerT * 1.5); if (markerT > 0.7) marker.visible = false; }

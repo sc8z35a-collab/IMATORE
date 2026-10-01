@@ -18,7 +18,7 @@ Format / IDs: see README §2. 状態: open → fixing(X) → fixed(commit) / won
 | B-002 | high | A | main.js | = A-005 (audio.mute) | fixed |
 | B-003 / C-001 | med | C | reflection.js | rain ripples ignore saved rain=off | fixing(C) |
 | B-004 | low | B/D | settings consumers | preset anisotropy / screensPerFrame / steam unused | B part fixed (de84847); screensPerFrame → D/A |
-| B-005 | med | B | props.js | tree crown white noise / shimmer | open(B) |
+| B-005 | med | B | props.js | tree crown white noise / shimmer | fixed (f9ab36f) |
 | B-006 | med | B | city.js | near low-rise facades read as black slabs | open(B) |
 | C-002 | med | C | landscape.js | Fuji lathe inside-out (reversed profile) | fixing(C) |
 | C-003 | low | C | landscape.js | containers all grey (instanceColor ignored) | fixing(C) |
