@@ -948,6 +948,41 @@ Object.assign(Landscape.prototype, {
     if (shipParts.length) this.group.add(Object.assign(new THREE.Mesh(merge(shipParts), hazeLit(0x2a2e36)), { name: 'ships' }));
     this.portLights = lights;
     this.buildBoats();
+    this.buildBayMist();
+  },
+
+  // ---------------------------------------------------------------- low sea mist (海霧) drifting over the bay
+  // 3 stacked horizontal sheets with drifting fbm, masked to the water (waterDepth) and soft near the shore.
+  // Lit by the city glow from below the horizon + a moon sheen; additive so it brightens the dark water a bit
+  // and veils distant boats/bridge piers, giving the bay depth.
+  buildBayMist() {
+    if (Q.landscape < 0.5) return; // ultra preset: skip (overdraw)
+    const mat = new THREE.ShaderMaterial({
+      uniforms: LU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      vertexShader: /* glsl */ `varying vec3 vW; void main(){ vec4 wp = modelMatrix*vec4(position,1.0); vW = wp.xyz; gl_Position = projectionMatrix*viewMatrix*wp; }`,
+      fragmentShader: /* glsl */ `varying vec3 vW; ${HAZE_GLSL} ${NOISE_GLSL} ${COAST_GLSL}
+        float fbm2(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * vn(p); p = p * 2.07 + 13.1; a *= 0.5; } return s; }
+        void main(){
+          float wd = waterDepth(vW.xz);
+          float mask = smoothstep(-40.0, 160.0, wd);
+          vec2 p = vW.xz * 0.0016 + vec2(uTime * 0.004, uTime * 0.0013) + vW.y * 0.05;
+          float m = smoothstep(0.42, 0.85, fbm2(p) * 0.85 + fbm2(p * 3.1 - uTime * 0.003) * 0.3);
+          float d = length(vW - cameraPosition);
+          // fade in with distance (no hard sheet edge right in front of the viewer), out at the horizon
+          float fd = smoothstep(150.0, 700.0, d) * (1.0 - smoothstep(4500.0, 7000.0, d));
+          vec3 V = normalize(vW - cameraPosition);
+          float moon = pow(max(dot(V, uMoon), 0.0), 6.0);
+          vec3 c = (uHaze * 0.55 + vec3(0.25, 0.28, 0.38) * moon) * m * mask * fd * 0.32;
+          gl_FragColor = vec4(c, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
+    for (const [h, k] of [[3, 0], [9, 1], [17, 2]]) {
+      const g = new THREE.PlaneGeometry(12000, 7000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(0, WY + h, 700 + 3500 + k * 60);
+      const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 2; m.name = 'bayMist';
+      this.group.add(m); this.reflHide.push(m);
+    }
   },
 
   // ---------------------------------------------------------------- C-004: living bay — yakatabune, ferries, wakes, lighthouse
@@ -979,6 +1014,19 @@ Object.assign(Landscape.prototype, {
     });
     const wakeGeo = new THREE.PlaneGeometry(1, 1, 1, 8); wakeGeo.rotateX(-Math.PI / 2); wakeGeo.translate(0, 0, 0.5); // +Z = astern
     const hullMat = hazeLit(0x1d2028), cabinMat = hazeLit(0x2a2d34);
+    const spillGeo = new THREE.PlaneGeometry(1, 1); spillGeo.rotateX(-Math.PI / 2);
+    const spillMat = (col, k) => new THREE.ShaderMaterial({
+      uniforms: { ...LU, uC: { value: new THREE.Color(col).multiplyScalar(k) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: /* glsl */ `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 wp = modelMatrix*vec4(position,1.0); vW = wp.xyz; gl_Position = projectionMatrix*viewMatrix*wp; }`,
+      fragmentShader: /* glsl */ `uniform vec3 uC; varying vec2 vUv; varying vec3 vW; ${HAZE_GLSL} ${NOISE_GLSL}
+        void main(){ vec2 q = (vUv - 0.5) * 2.0; float r = dot(q, q);
+          float rip = 0.6 + 0.4 * vn(vec2(vW.x * 0.08, vW.z * 0.6 + uTime * 0.8));      // broken up by the waves
+          float a = exp(-r * 3.0) * rip; float d = length(vW - cameraPosition);
+          gl_FragColor = vec4(uC * a * exp(-d * uHazeDen * 0.6), 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
     const make = (kind) => {
       const g = new THREE.Group();
       const parts = [], lights = [];
@@ -987,7 +1035,7 @@ Object.assign(Landscape.prototype, {
         // 屋形船: long low hull, lit paper-window cabin, red lanterns along the eaves
         len = 24; wakeW = 7; wakeL = 55; speed = 2.2 + R() * 1.2;
         parts.push(boxAt(4.6, 1.4, len, 0, -0.8, 0));
-        const cab = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.2, len * 0.72), hazeBasic(0xffc88a, 1.25)); cab.position.set(0, 1.7, 0.6); g.add(cab);
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.2, len * 0.72), hazeBasic(0xffc88a, 2.2)); cab.position.set(0, 1.7, 0.6); g.add(cab);
         const roof = new THREE.BoxGeometry(4.8, 0.35, len * 0.8); roof.translate(0, 2.95, 0.6); parts.push(roof);
         for (let k = 0; k < 9; k++) for (const sd of [-1, 1]) lights.push({ x: sd * 2.45, y: 2.6, z: -len * 0.32 + k * len * 0.08, c: [2.6, 0.35, 0.12], s: 0.9 });
       } else if (kind === 'ferry') {
@@ -1006,7 +1054,10 @@ Object.assign(Landscape.prototype, {
       const pts = new THREE.Points(pointsGeo(lights), pointsMaterial()); pts.frustumCulled = false; g.add(pts);
       const wake = new THREE.Mesh(wakeGeo, wakeMat); wake.scale.set(wakeW, 1, wakeL); wake.position.set(0, 0.25 - (WY - WY), len * 0.45); wake.renderOrder = 1; wake.frustumCulled = false;
       g.add(wake);
-      // light on the water under/behind the boat (warm smear)
+      // light spilled onto the water around the boat (reads as the boat's reflection at distance)
+      const spill = new THREE.Mesh(spillGeo, spillMat(kind === 'yakata' ? 0xff9a4a : 0xbfd4ff, kind === 'yakata' ? 0.55 : 0.3));
+      spill.scale.set(len * 0.9, 1, len * 1.6); spill.position.y = 0.3; spill.renderOrder = 1; spill.frustumCulled = false;
+      g.add(spill);
       return { g, len, speed };
     };
     // loops: ellipses inside the bay (bay coords), checked to stay on water
