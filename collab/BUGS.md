@@ -28,3 +28,4 @@ Format / IDs: see README §2. 状態: open → fixing(X) → fixed(commit) / won
 | A-012 | low | A | main.js | prompt showed only the title; no district/heat context; nothing on terraces (landmarks unnamed) | fixed (prompt card + landmark spotting) |
 | A-013 | crit | A | main.js:404 | own regression: `// comment` placed mid-line swallowed `crossDist, crossPan };` → SyntaxError, boot dead. Found+fixed by B (c536e7b) | fixed |
 | A-014 | med | A | main.js audio | sound bed ignored the 雨 toggle; loop sources shared one buffer in phase; no limiter → clipping when one-shots stack | fixed |
+| A-015 | med | A | main.js | `body.sheet-open` was only updated every 3rd frame inside updatePrompt → on slow phones the prompt card / HUD buttons showed on top of a just-opened sheet (seen in QA shot) | fixed (MutationObserver) |

@@ -209,6 +209,16 @@ async function boot() {
     else toast('ジャイロを利用できません(センサー非対応または許可されていません)');
     audio.blip(740);
   };
+  // body.sheet-open must follow sheet visibility *immediately* (updatePrompt only runs every 3rd frame -> at low fps the
+  // prompt card / HUD buttons stayed visible on top of a freshly opened sheet)
+  let promptHit = null; // (declared here: syncSheetClass below and updatePrompt both use it)
+  const syncSheetClass = () => {
+    const so = sheetOpen();
+    document.body.classList.toggle('sheet-open', so);
+    if (so) { $('prompt').classList.add('hidden'); promptHit = null; $('crosshair').classList.remove('hot'); }
+  };
+  const sheetObs = new MutationObserver(syncSheetClass);
+  SHEETS.forEach((id) => sheetObs.observe($(id), { attributes: true, attributeFilter: ['class'] }));
   // touching the world anywhere (also the joystick half, which never produces a 'tap') dismisses an open sheet
   $('gl').addEventListener('touchstart', () => { if (controls.enabled && sheetOpen()) closeSheets(); }, { passive: true });
   // stop touch on sheets propagating to canvas
@@ -473,7 +483,6 @@ async function boot() {
   }
   const center = new THREE.Vector2(0, 0);
   let lastZone = '';
-  let promptHit = null;
   // landmarks you can "spot" from a terrace (look roughly toward them) -> prompt shows name + distance
   const SIGHT = [['skytree', 'スカイツリー風 電波塔', '634m'], ['lattice', '東京タワー風 鉄塔', '333m'], ['wheel', '湾岸の大観覧車', '115m'], ['fuji', '富士山', '3776m']];
   const _fwd = new THREE.Vector3();
