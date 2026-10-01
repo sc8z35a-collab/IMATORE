@@ -25,3 +25,4 @@ Format / IDs: see README §2. 状態: open → fixing(X) → fixed(commit) / won
 | C-004 | low | C | landscape.js | yakatabune/sailing ships promised in comment but missing | fixing(C) |
 | C-005 | low | C | engine.js | DPR ping-pong at 30 fps cap (ultra) | fixing(C) |
 | C-006 | low | C | sky.js | moon corona sprite visible through thick clouds | fixing(C) |
+| A-012 | low | A | main.js | prompt showed only the title; no district/heat context; nothing on terraces (landmarks unnamed) | fixed (prompt card + landmark spotting) |

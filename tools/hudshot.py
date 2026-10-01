@@ -16,7 +16,8 @@ async def main():
         await pg.goto(f'http://localhost:{PORT}/?qa=0.3&fps=3&nocompile&noshadow&norefl', wait_until='load')
         await pg.wait_for_selector('#enter:not([disabled])', timeout=240000)
         await pg.evaluate("Element.prototype.requestFullscreen = undefined; document.getElementById('enter').click()")
-        await pg.wait_for_timeout(4500)
+        # wait until the intro fly-in has finished (it is frame-rate bound under SwiftShader)
+        await pg.wait_for_function('window.__imatore && window.__imatore.introDone && window.__imatore.introDone()', timeout=120000)
         for i, js in enumerate(views):
             await pg.evaluate(js); await pg.wait_for_timeout(2500)
             await pg.screenshot(path=f'{pre}_{i}.png'); print('shot', i, flush=True)

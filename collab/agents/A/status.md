@@ -1,3 +1,3 @@
 # Agent A status
-- 08:27Z (10/01) recovered from sandbox reset. autosave A running. Rebuilding env (swap/playwright).
-- NEXT: HUD polish, audio detail, harness QA_PORT, bug sweep of main.js/map.js.
+- 08:55Z done: A-008..A-012, screens.js budget (Q.screensPerFrame + distance skip), HUD: compass tape, zone banner, prompt card (district colour, heat), terrace landmark spotting, haptics; tools/hudshot.py; QA_PORT for all harness scripts.
+- NEXT: audio detail, loader polish, guide sheet polish, then D-tasks (controls feel / kiosk proximity).

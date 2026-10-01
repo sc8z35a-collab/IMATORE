@@ -240,7 +240,7 @@ body.sheet-open #prompt, body.sheet-open #crosshair, body.sheet-open #minimap, b
 #compass-in > div { position: relative; width: 720px; height: 100%; flex: none; }
 #compass-in span { position: absolute; top: 0; transform: translateX(-50%); font-family: Orbitron, sans-serif; color: rgba(234,246,255,.85);
   text-shadow: 0 0 6px rgba(0,0,0,.9); line-height: 1; }
-#compass-in span.t { top: 12px; width: 1px; height: 6px; background: rgba(234,246,255,.45); }
+#compass-in span.t { top: 11px; width: 2px; height: 7px; border-radius: 1px; background: rgba(234,246,255,.6); }
 #compass-in span.c { font-size: 11px; font-weight: 900; top: 3px; }
 #compass-in span.c:first-child { color: #ff5a5a; }
 #compass-in span.o { font-size: 8px; top: 5px; opacity: .7; }
