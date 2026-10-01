@@ -39,29 +39,37 @@ class PropSet {
 // ellipsoid shell, normals bent outward from the crown centre so lighting reads as a soft volume
 // instead of individual flat planes. Branches are real geometry visible through the gaps.
 let _tree = null;
+// Leaf atlas. B-005: the old version painted leaves on a *transparent* canvas -> transparent texels are stored
+// as black (premultiplied canvas), so mip levels averaged leaf colour with black and alpha fell below alphaTest:
+// crowns dissolved into sparse speckles/noise at 5-30 m. Now: an OPAQUE colour map (foliage colour everywhere,
+// so mips never darken) + a separate greyscale alphaMap with dense, clustered coverage that survives mipmapping.
 function leafTexture() {
-  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d'); const L = rng(17);
-  for (let k = 0; k < 420; k++) {
+  const S = 512;
+  const col = document.createElement('canvas'); col.width = col.height = S;
+  const al = document.createElement('canvas'); al.width = al.height = S;
+  const g = col.getContext('2d'), a = al.getContext('2d'); const L = rng(17);
+  g.fillStyle = 'hsl(108,32%,24%)'; g.fillRect(0, 0, S, S);
+  a.fillStyle = '#000'; a.fillRect(0, 0, S, S);
+  // soft core so the card centre is always solid (no see-through holes in the middle of a crown)
+  const core = a.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.36);
+  core.addColorStop(0, '#fff'); core.addColorStop(0.7, 'rgba(255,255,255,.85)'); core.addColorStop(1, 'rgba(255,255,255,0)');
+  a.fillStyle = core; a.fillRect(0, 0, S, S);
+  const leaf = (ctx, len, wid) => { ctx.beginPath(); ctx.moveTo(-len / 2, 0); ctx.quadraticCurveTo(0, -wid, len / 2, 0); ctx.quadraticCurveTo(0, wid, -len / 2, 0); ctx.fill(); };
+  for (let k = 0; k < 900; k++) {
     // cluster density falls off toward the edge -> ragged, natural silhouette
-    const a = L() * Math.PI * 2, r = Math.pow(L(), 0.7) * S * 0.46;
-    const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
-    const len = 20 + L() * 22, wid = len * (0.42 + L() * 0.12), rot = L() * Math.PI * 2;
-    const h = 95 + L() * 30, sat = 35 + L() * 25, lum = 22 + L() * 26 - (r / S) * 8;
-    g.save(); g.translate(x, y); g.rotate(rot);
-    g.fillStyle = `hsl(${h},${sat}%,${lum}%)`;
-    g.beginPath(); g.moveTo(-len / 2, 0);
-    g.quadraticCurveTo(0, -wid, len / 2, 0); g.quadraticCurveTo(0, wid, -len / 2, 0); g.fill();
-    g.strokeStyle = `hsla(${h},${sat}%,${lum + 14}%,.55)`; g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(-len / 2, 0); g.lineTo(len / 2, 0); g.stroke();
-    g.restore();
+    const t = L() * Math.PI * 2, r = Math.pow(L(), 0.62) * S * 0.47;
+    const x = S / 2 + Math.cos(t) * r, y = S / 2 + Math.sin(t) * r;
+    const len = 16 + L() * 20, wid = len * (0.42 + L() * 0.12), rot = L() * Math.PI * 2;
+    const h = 92 + L() * 34, sat = 30 + L() * 28, lum = 18 + L() * 30 - (r / S) * 10 + (y < S / 2 ? 6 : -4); // lit from above
+    g.save(); g.translate(x, y); g.rotate(rot); g.fillStyle = `hsl(${h},${sat}%,${lum}%)`; leaf(g, len, wid);
+    g.strokeStyle = `hsla(${h},${sat}%,${lum + 14}%,.5)`; g.lineWidth = 1; g.beginPath(); g.moveTo(-len / 2, 0); g.lineTo(len / 2, 0); g.stroke(); g.restore();
+    a.save(); a.translate(x, y); a.rotate(rot); a.fillStyle = '#fff'; leaf(a, len * 1.08, wid * 1.15); a.restore();
   }
-  // a few twigs
+  // twigs (visible in the colour map only where alpha survives)
   g.strokeStyle = 'rgba(40,30,22,.9)'; g.lineWidth = 3;
-  for (let k = 0; k < 6; k++) { const a = L() * 6.28; g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + Math.cos(a) * S * 0.3, S / 2 + Math.sin(a) * S * 0.3); g.stroke(); }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, Q.anisotropy || 8); t.generateMipmaps = true;
-  return t;
+  for (let k = 0; k < 6; k++) { const t = L() * 6.28; g.beginPath(); g.moveTo(S / 2, S / 2); g.lineTo(S / 2 + Math.cos(t) * S * 0.3, S / 2 + Math.sin(t) * S * 0.3); g.stroke(); }
+  const mk = (c, srgb) => { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, Q.anisotropy || 8); t.generateMipmaps = true; return t; };
+  return { map: mk(col, true), alphaMap: mk(al, false) };
 }
 function makeTree() {
   if (_tree) return _tree;
@@ -107,9 +115,10 @@ function makeTree() {
     cards.push(pl);
   }
   const leafGeo = mergeGeometries(cards);
+  const lt = leafTexture();
   const leafMat = new THREE.MeshStandardMaterial({
-    map: leafTexture(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.78, metalness: 0,
-    color: 0xb4c8b8, envMapIntensity: 0.3, alphaToCoverage: true,
+    map: lt.map, alphaMap: lt.alphaMap, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0,
+    color: 0x9fb4a2, envMapIntensity: 0.25, alphaToCoverage: true,
   });
   const barkMat = new THREE.MeshStandardMaterial({ color: 0x3a3029, roughness: 0.92, envMapIntensity: 0.3 });
   _tree = { trunkGeo, leafGeo, leafMat, barkMat };
