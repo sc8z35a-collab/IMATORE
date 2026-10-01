@@ -67,8 +67,10 @@ export const Q = { ...PRESETS[SETTINGS.preset] };
 export const LITE = SETTINGS.preset === 'ultra';
 
 export function saveSettings(patch = {}) {
+  // an explicit preset choice ends auto-detection; toggling rain/sound/... must NOT pin the auto-detected preset
+  if ('preset' in patch) patch = { ...patch, auto: false };
   Object.assign(SETTINGS, patch);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ preset: SETTINGS.preset, rain: SETTINGS.rain, sound: SETTINGS.sound, fx: SETTINGS.fx, people: SETTINGS.people, traffic: SETTINGS.traffic }));
+    localStorage.setItem(KEY, JSON.stringify({ preset: SETTINGS.auto ? undefined : SETTINGS.preset, rain: SETTINGS.rain, sound: SETTINGS.sound, fx: SETTINGS.fx, people: SETTINGS.people, traffic: SETTINGS.traffic }));
   } catch (e) { /* private mode */ }
 }

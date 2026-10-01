@@ -155,6 +155,7 @@ export class MapUI {
     this.onWarpDistrict = onWarpDistrict; this.onWarpLandmark = onWarpLandmark; this.onWarpHome = onWarpHome;
     this.mode = 'hub';
     this.view = { x: 0, z: 0, s: 1 };
+    this.dpr = 1; // set by resize(); must exist before the first drawFull (loop may draw before open())
     this._bindFull();
   }
 

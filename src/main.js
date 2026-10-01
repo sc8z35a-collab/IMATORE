@@ -208,6 +208,8 @@ async function boot() {
     else toast('ジャイロを利用できません(センサー非対応または許可されていません)');
     audio.blip(740);
   };
+  // touching the world anywhere (also the joystick half, which never produces a 'tap') dismisses an open sheet
+  $('gl').addEventListener('touchstart', () => { if (controls.enabled && sheetOpen()) closeSheets(); }, { passive: true });
   // stop touch on sheets propagating to canvas
   SHEETS.forEach((id) => $(id).addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true }));
 
@@ -318,7 +320,9 @@ async function boot() {
   function openMap() {
     $('detail').classList.add('hidden'); $('guide').classList.add('hidden'); $('settings').classList.add('hidden');
     $('map').classList.remove('hidden');
-    requestAnimationFrame(() => mapUI.open(controls.pos, controls.yaw));
+    // synchronous: removing .hidden + getBoundingClientRect forces layout, so the canvas has its real size now
+    // (deferring to rAF let the main loop call drawFull() first with an unsized canvas)
+    mapUI.open(controls.pos, controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0));
     audio.blip(880);
   }
   $('minimap').addEventListener('click', openMap);
@@ -507,7 +511,7 @@ async function boot() {
       const z = zoneAt(controls.pos.x, controls.pos.z);
       const zd = z.d >= 0 ? DISTRICTS[z.d] : null;
       mapUI.drawMini(controls.pos, controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0), { label: z.terrace ? 'TERRACE' : zd ? zd.name : 'PLAZA', color: zd ? zd.color : '#27e0ff' });
-      if (!$('map').classList.contains('hidden') && frame % 6 === 0) { mapUI.player = { x: controls.pos.x, z: controls.pos.z, yaw: controls.yaw }; mapUI.drawFull(t); }
+      if (!$('map').classList.contains('hidden') && frame % 6 === 0) { mapUI.player = { x: controls.pos.x, z: controls.pos.z, yaw: controls.yaw + (controls.gyro.on ? controls.gyro.yaw : 0) }; mapUI.drawFull(t); }
       if (z.name !== lastZone) { $('zone').textContent = z.name; lastZone = z.name; audio.zone(z.d); }
       updatePrompt();
       audio.update(controls.pos, controls.vel.length(), dt * 3);
