@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import { QA } from '../util/qa.js';
+import { Q, SETTINGS } from '../settings.js';
 
 // Planar reflection for the ground plane (y = 0), shared by every ground material.
 // Materials get it injected via onBeforeCompile -> wet asphalt with puddles & rain ripples.
 export class GroundReflection {
   constructor(renderer, scale = 0.5) {
     this.renderer = renderer;
-    this.scale = scale;
+    this.scale = Q.reflScale || scale;
+    // 超軽量: no mirror pass at all (saves a full second scene render per frame); materials get a cheap wet sheen
+    this.enabled = Q.reflection;
     this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : 2 });
     this.cam = new THREE.PerspectiveCamera();
     this.texMat = new THREE.Matrix4();
@@ -15,7 +18,7 @@ export class GroundReflection {
       tRefl: { value: this.rt.texture },
       uReflMat: { value: this.texMat },
       uTime: { value: 0 },
-      uRain: { value: 1 },
+      uRain: { value: SETTINGS.rain ? 1 : 0 }, // C-001: honour the saved rain toggle at boot
       uReflRes: { value: new THREE.Vector2(4, 4) },
     };
     this._clip = new THREE.Vector4();
@@ -28,6 +31,7 @@ export class GroundReflection {
   }
 
   setSize(w, h, dpr) {
+    if (!this.enabled) return;
     const W = Math.max(4, Math.floor(w * dpr * this.scale));
     const H = Math.max(4, Math.floor(h * dpr * this.scale));
     this.rt.setSize(W, H);
@@ -35,6 +39,7 @@ export class GroundReflection {
   }
 
   update(scene, camera) {
+    if (!this.enabled) return;
     const cam = this.cam;
     const cp = camera.getWorldPosition(this._v);
     this._rm.extractRotation(camera.matrixWorld);
@@ -94,6 +99,12 @@ export class GroundReflection {
   // wet: base wetness 0..1 ; puddle: amount of puddles
   patch(material, { wet = 0.7, puddle = 0.5, tint = new THREE.Color(1, 1, 1) } = {}) {
     const U = this.uniforms;
+    if (!this.enabled) {
+      // lite: just a glossier, darker wet surface lit by the env map / lights
+      material.roughness = Math.min(material.roughness, 0.55 - puddle * 0.25);
+      material.color?.multiplyScalar(0.8);
+      return material;
+    }
     material.userData.reflSelf = true;
     material.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U, {

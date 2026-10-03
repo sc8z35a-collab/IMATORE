@@ -3,6 +3,8 @@
 #   python tools/shot.py out.png "[js after enter]" [wait_s] [--land] [--qa=0.4]
 import sys, asyncio, time
 from playwright.async_api import async_playwright
+import os
+PORT = os.environ.get('QA_PORT', '4173')  # e.g. QA_PORT=4174 python3 tools/snap.py ...
 out = sys.argv[1] if len(sys.argv) > 1 else '/tmp/s.png'
 js = sys.argv[2] if len(sys.argv) > 2 else ''
 wait = float(sys.argv[3]) if len(sys.argv) > 3 else 5
@@ -21,7 +23,7 @@ async def main():
         pg.on('console', lambda m: logs.append(f'[{m.type}] {m.text[:300]}'))
         pg.on('pageerror', lambda e: logs.append(f'[pageerror] {e}'))
         t0 = time.time()
-        await pg.goto(f'http://localhost:4173/?qa={qa}&fps=2', wait_until='load')
+        await pg.goto(f'http://localhost:{PORT}/?qa={qa}&fps=2', wait_until='load')
         try:
             await pg.wait_for_selector('#enter:not([disabled])', timeout=150000)
         except Exception as e:

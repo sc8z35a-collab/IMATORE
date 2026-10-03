@@ -20,6 +20,26 @@ export const KIOSK_STEP = 9.6;
 export const EYE = 1.62;
 export const CURB = 0.12;
 export const TAN_HALF = Math.tan(Math.PI / N_AVE); // tan 22.5°
+// The whole hub sits on an elevated artificial ground (人工地盤) PLAT_H metres above the surrounding city.
+// Its outer rim is at along-distance EDGE on every avenue: glass-railed terraces overlook the lower city.
+export const PLAT_H = 28;
+export const EDGE = 212;                          // octagon vertex radius (vertices lie on the avenue axes)
+export const EDGE_APO = EDGE * Math.cos(Math.PI / N_AVE); // apothem (edge mid-points, on the bisectors) ≈ 195.9
+export const TERRACE_END = EDGE - 3.2;
+// signed distance to the platform octagon edge (positive = inside)
+export function edgeDist(x, z) {
+  const a = Math.atan2(z, x) + Math.PI / 2;                // 0 at avenue 0 (−Z)
+  const seg = Math.PI * 2 / N_AVE;
+  const k = Math.floor(a / seg + 1e-9);
+  const mid = -Math.PI / 2 + (k + 0.5) * seg;              // bisector between avenue k and k+1
+  return EDGE_APO - (x * Math.cos(mid) + z * Math.sin(mid));
+}
+export function edgePoint(t) {
+  // t in [0, N_AVE): position along the octagon outline (integer t = avenue axis vertex)
+  const k = Math.floor(t) % N_AVE, f = t - Math.floor(t);
+  const a0 = -Math.PI / 2 + (k / N_AVE) * Math.PI * 2, a1 = -Math.PI / 2 + ((k + 1) / N_AVE) * Math.PI * 2;
+  return { x: Math.cos(a0) * EDGE * (1 - f) + Math.cos(a1) * EDGE * f, z: Math.sin(a0) * EDGE * (1 - f) + Math.sin(a1) * EDGE * f };
+}
 
 export function aveAngle(i) {
   // avenue 0 points to -Z (north) and goes clockwise seen from above
@@ -51,14 +71,18 @@ export function aveLocal(x, z) {
 export const obstacles = [];
 export function addObstacle(x, z, r) { obstacles.push({ x, z, r }); }
 
+// sky deck (rooftop observation deck): while active, the player is confined to it
+export const DECK = { active: false, x: 0, z: 0, y: 0, r: 0 };
+
 export function isWalkable(x, z, pad = 0.3) {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+  if (DECK.active) return Math.hypot(x - DECK.x, z - DECK.z) < DECK.r - pad;
   const r = Math.hypot(x, z);
   let ok = false;
   if (r < PLAZA_R - 0.8 - pad) ok = r > 6.2 + pad;
   else {
     const L = aveLocal(x, z);
-    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && L.along < AVE_END - 6;
+    ok = !!L && Math.abs(L.lateral) < AVE_HALF - 0.9 - pad && edgeDist(x, z) > 1.25 + pad;
   }
   if (!ok) return false;
   for (const o of obstacles) {
@@ -70,6 +94,7 @@ export function isWalkable(x, z, pad = 0.3) {
 
 // ground height under a point (road = 0, pavement = CURB)
 export function groundHeight(x, z) {
+  if (DECK.active) return DECK.y;
   const r = Math.hypot(x, z);
   if (r < RING_IN) return CURB;
   if (r < RING_OUT) return 0;
@@ -79,7 +104,7 @@ export function groundHeight(x, z) {
     return CURB;
   }
   const L = aveLocal(x, z);
-  if (L && Math.abs(L.lateral) < ROAD_HALF) return 0;
+  if (L && Math.abs(L.lateral) < ROAD_HALF && L.along < AVE_END) return 0;
   return CURB;
 }
 

@@ -13,6 +13,7 @@ export class Kiosks {
     this.group = new THREE.Group();
     scene.add(this.group);
     this.pickables = [];
+    this.near = [];       // per-kiosk proximity state (wake-up glow when the player walks up)
     this.animated = [];
     this.lights = [];
   }
@@ -69,11 +70,35 @@ export class Kiosks {
         this.group.add(g);
         addObstacle(p.x, p.z, 1.0);
         item._pos = { x: p.x, z: p.z, rotY: p.rotY };
+        this.near.push({ x: p.x, z: p.z, rotY: p.rotY, color: d.color, sm, k: 0 });
       });
       this.buildGate(d, i);
     });
     this.buildTower();
+    this.buildHalos();
     return this;
+  }
+
+  // floor halo ring in front of every kiosk: invisible from afar, fades in + pulses when the player is within ~7 m.
+  // One InstancedMesh for all ~100 kiosks; colour per instance, scale 0 = hidden.
+  buildHalos() {
+    const geo = new THREE.RingGeometry(0.62, 0.7, 48); geo.rotateX(-Math.PI / 2);
+    const tick = new THREE.RingGeometry(0.76, 0.8, 48, 1, 0, Math.PI * 0.35); tick.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -5, toneMapped: true });
+    const n = this.near.length;
+    if (!n) return;
+    this.halo = new THREE.InstancedMesh(geo, mat, n);
+    this.haloTick = new THREE.InstancedMesh(tick, mat, n);
+    const c = new THREE.Color(), m = new THREE.Matrix4().makeScale(0, 0, 0);
+    this.near.forEach((k, i) => {
+      // centre of the halo: 1.6 m in front of the screen face, where the player stands to read it
+      k.hx = k.x + Math.sin(k.rotY) * 1.6; k.hz = k.z + Math.cos(k.rotY) * 1.6;
+      c.set(k.color).multiplyScalar(2.2);
+      for (const im of [this.halo, this.haloTick]) { im.setMatrixAt(i, m); im.setColorAt(i, c); }
+    });
+    for (const im of [this.halo, this.haloTick]) { im.instanceColor.needsUpdate = true; im.frustumCulled = false; im.renderOrder = 2; this.group.add(im); }
+    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._v = new THREE.Vector3(); this._s = new THREE.Vector3(); this._Y = new THREE.Vector3(0, 1, 0);
   }
 
   poolMat(color) {
@@ -257,8 +282,25 @@ export class Kiosks {
     this.pickables.push(hit);
   }
 
-  update(t, dt) {
+  update(t, dt, camPos) {
     for (const f of this.animated) f(t);
+    if (camPos && this.halo) {
+      let dirty = false;
+      this.near.forEach((k, i) => {
+        const d = Math.hypot(camPos.x - k.hx, camPos.z - k.hz);
+        const want = d < 7 ? 1 - Math.max(0, d - 3) / 4 : 0;
+        const nk = k.k + (want - k.k) * Math.min(1, (dt || 0.016) * 5);
+        if (Math.abs(nk - k.k) < 1e-3 && nk < 1e-3) { k.k = 0; return; }
+        k.k = nk; dirty = true;
+        // screen wakes up: a touch brighter as you approach
+        k.sm.color.setScalar(1.15 + 0.35 * nk);
+        const sc = nk < 0.01 ? 0 : (0.85 + 0.15 * nk) * (1 + 0.05 * Math.sin(t * 4 + i));
+        this._v.set(k.hx, 0.13, k.hz); this._s.set(sc, 1, sc);
+        this.halo.setMatrixAt(i, this._m.compose(this._v, this._q.setFromAxisAngle(this._Y, k.rotY), this._s));
+        this.haloTick.setMatrixAt(i, this._m.compose(this._v, this._q.setFromAxisAngle(this._Y, k.rotY + t * 1.6), this._s));
+      });
+      if (dirty) { this.halo.instanceMatrix.needsUpdate = true; this.haloTick.instanceMatrix.needsUpdate = true; }
+    }
     if (this.rings) this.rings.forEach((r) => { r.tex.offset.x = ((r.tex.offset.x + r.sp * dt) % 1 + 1) % 1; });
     if (this.logo) this.logo.rotation.y = t * 0.25;
     if (this.orbit) this.orbit.rotation.y = t * 0.05;

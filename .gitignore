@@ -6,3 +6,12 @@ dist/
 core
 core.*
 .swap
+tools/autosave/autosave.log
+tools/autosave/.lock
+tools/autosave/.wlock
+tools/autosave/.pid
+tools/autosave/.heartbeat
+tools/autosave/.pause
+tools/autosave/inbox.log
+tools/autosave/.agent
+tools/autosave/.cycle.lock

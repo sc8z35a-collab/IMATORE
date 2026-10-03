@@ -17,3 +17,11 @@
 ## QA
 - `bash tools/setup_env.sh` — ヘッドレス環境の再構築
 - `python3 tools/smoke.py URL` — 起動 / 404 / pageerror のスモークテスト
+
+## 自動保存 (作業ロス防止)
+サンドボックスがリセットされても作業が消えないよう、`tools/autosave/` のデーモンが
+**3 分おき**に未コミットの変更を commit → `genspark_ai_developer` へ push → PR を自動作成/維持します。
+- 起動: `bash tools/autosave/start.sh` (冪等。ウォッチドッグが 5 分ごとに生存確認し、落ちていれば再起動)
+- 停止: `bash tools/autosave/stop.sh` ／ 一時停止: `touch tools/autosave/.pause`
+- ログ: `tools/autosave/autosave.log`
+- リモートと分岐した場合は自動 rebase、衝突時は `autosave/<日時>` ブランチへ退避 push (force push はしない)

@@ -28,13 +28,17 @@
 
   <!-- Loading / Gate -->
   <div id="loader">
+    <div class="ld-sky" aria-hidden="true"><i class="ld-moon"></i><svg class="ld-city" viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 160V118h40v-26h22v26h18V70h30v48h16V96h26V54l14-14 14 14v64h20V84h34v34h12V62h18V30h6V10h4v20h6v32h18v56h22V90h30v28h14V74h40v44h16V40h12l8-18 8 18h12v78h20V98h28v20h22V66h36v52h14V86h20V50h30v68h18V92h26v26h20V58h12V34h10v24h12v60h30V80h28v38h16V102h22v16h28V70h40v48h18V88h24v30h20V60h34v58h16V96h30v22h20V76h22v42h40V96h24v22h16V160Z"/></svg></div>
     <div class="ld-inner">
       <div class="ld-logo"><span class="jp">今トレ</span><span class="en">IMATORE</span></div>
       <div class="ld-sub">3D TREND HUB — <span id="ld-date"></span></div>
       <div class="ld-bar"><i id="ld-fill"></i></div>
       <div class="ld-msg" id="ld-msg">世界を構築中…</div>
+      <div class="ld-dist" id="ld-dist" aria-hidden="true"></div>
+      <div class="ld-tip" id="ld-tip"></div>
       <button id="enter" class="ld-btn" disabled>LOADING</button>
       <div class="ld-hint">🎧 イヤホン推奨 ・ 📱 横向き全画面専用</div>
+      <button id="ld-settings" class="ld-link" type="button">⚙ 画質設定 (超軽量モード)</button>
       <div class="ld-desk" id="ld-desk">このハブはスマートフォン専用に最適化されています。<br />スマホで開いてください。</div>
     </div>
   </div>
@@ -46,13 +50,17 @@
       <div class="clock"><span id="clk"></span><small id="zone">PLAZA</small></div>
       <canvas id="minimap" width="240" height="240"></canvas>
     </div>
+    <div id="compass" aria-hidden="true"><div id="compass-in"></div><i></i></div>
+    <div id="zone-banner" aria-live="polite"><small id="zb-k"></small><b id="zb-t"></b><span id="zb-s"></span></div>
     <div id="crosshair"></div>
-    <div id="prompt" class="hidden"><span id="prompt-t"></span><small>タップで開く</small></div>
+    <div id="prompt" class="hidden"><em id="prompt-k"></em><span id="prompt-t"></span><small id="prompt-s">タップで開く</small></div>
     <div id="ticker"><div id="ticker-in"></div></div>
     <div class="hud-btns">
-      <button id="btn-guide" title="ガイド">☰</button>
+      <button id="btn-guide" title="ガイド" aria-label="トレンドガイド">☰</button>
+      <button id="btn-map" title="マップ" aria-label="マップ">MAP</button>
       <button id="btn-run" title="走る">RUN</button>
       <button id="btn-gyro" title="ジャイロ">GYRO</button>
+      <button id="btn-settings" title="設定" aria-label="設定">⚙</button>
     </div>
     <div id="joy"><div id="joy-knob"></div></div>
   </div>
@@ -62,6 +70,19 @@
     <div class="sheet-h"><b>TREND GUIDE</b><span>タップでその通りへワープ</span><button class="x" data-close="guide">×</button></div>
     <div id="guide-list"></div>
     <div class="credits">画像: NASA / Poly Haven(CC0) / Flickr・PxHere・PickPik (CC) / AI生成 ・ 調査時点 <span id="asof"></span></div>
+  </div>
+
+  <!-- Map sheet (HUB = walkable platform / AREA = surrounding landscape) -->
+  <div id="map" class="sheet sheet-wide hidden">
+    <div class="sheet-h"><b>MAP</b><span>地区をタップでワープ ・ AREA のランドマークをタップで展望テラスへ</span><button class="x" data-close="map" aria-label="閉じる">×</button></div>
+    <div class="map-tabs"><button data-map="hub" class="on">HUB</button><button data-map="area">AREA</button></div>
+    <canvas id="map-canvas"></canvas>
+  </div>
+
+  <!-- Settings sheet -->
+  <div id="settings" class="sheet hidden">
+    <div class="sheet-h"><b>SETTINGS</b><span>画質・表示・サウンド</span><button class="x" data-close="settings" aria-label="閉じる">×</button></div>
+    <div id="settings-body"></div>
   </div>
 
   <!-- Detail sheet -->
