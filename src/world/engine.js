@@ -6,8 +6,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QA, QA_DPR, QA_OFF } from '../util/qa.js';
 import { Q, SETTINGS } from '../settings.js';
+import { StreakPass, LENS_DROPS_GLSL } from './post.js';
 
-// Final cinematic grade: lens distortion, chromatic aberration, vignette, grain, rain-on-lens glints.
+// Final cinematic grade: lens distortion, chromatic aberration, rain on the lens (refracting drops),
+// filmic split-tone + teal/magenta night grade, vignette, grain, warp + photo-mode controls.
 const FinalShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -18,6 +20,12 @@ const FinalShader = {
     uGrain: { value: 0.045 },
     uWarp: { value: 0.0 },
     uFade: { value: 0.0 },
+    uDrops: { value: 0.0 },      // lens raindrops 0..1 (rain toggle x fx toggle x not under a roof)
+    uSat: { value: 1.08 },
+    uContrast: { value: 1.0 },
+    uExpo: { value: 1.0 },
+    uFilter: { value: 0 },       // photo-mode look: 0 none, 1 noir, 2 cyber, 3 film, 4 dream
+    uFlash: { value: 0 },        // lightning / firework flash lift
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -25,23 +33,43 @@ const FinalShader = {
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes;
     uniform float uCA; uniform float uVig; uniform float uGrain; uniform float uWarp; uniform float uFade;
+    uniform float uDrops; uniform float uSat; uniform float uContrast; uniform float uExpo; uniform int uFilter; uniform float uFlash;
     varying vec2 vUv;
     float hash(vec2 p){ p = fract(p*vec2(123.34,456.21)); p += dot(p,p+45.32); return fract(p.x*p.y); }
+    ${LENS_DROPS_GLSL}
     void main(){
       vec2 uv = vUv;
       vec2 c = uv - 0.5;
       float r2 = dot(c,c);
       // barrel distortion + warp (fast travel)
       uv = 0.5 + c * (1.0 + r2 * (0.035 + uWarp*0.6));
+      // rain on the lens: refract the image through the drops, slightly defocus + brighten their rims
+      vec3 dr = lensDrops(vUv, uTime, uDrops, uRes.x / uRes.y);
+      uv += dr.xy;
       vec2 dir = c * (uCA + uWarp*0.02) * (0.4 + r2*2.2);
       vec3 col;
       col.r = texture2D(tDiffuse, uv + dir).r;
       col.g = texture2D(tDiffuse, uv).g;
       col.b = texture2D(tDiffuse, uv - dir).b;
-      // subtle split tone: cool shadows, warm highlights
+      if (dr.z > 0.01) {
+        // drops act as tiny lenses: blur what is behind them (4 taps) and pick up a cool rim highlight
+        vec2 px = 3.0 / uRes;
+        vec3 bl = texture2D(tDiffuse, uv + vec2(px.x, 0.0)).rgb + texture2D(tDiffuse, uv - vec2(px.x, 0.0)).rgb
+                + texture2D(tDiffuse, uv + vec2(0.0, px.y)).rgb + texture2D(tDiffuse, uv - vec2(0.0, px.y)).rgb;
+        col = mix(col, bl * 0.25 * 1.08, dr.z * 0.85);
+        col += vec3(0.03, 0.04, 0.06) * smoothstep(0.2, 0.9, length(dr.xy) * 60.0) * dr.z;
+      }
+      col *= uExpo;
+      col += vec3(0.08, 0.09, 0.14) * uFlash;
+      // subtle split tone: cool shadows, warm highlights ; teal-magenta night grade
       float l = dot(col, vec3(0.2126,0.7152,0.0722));
-      col = mix(col * vec3(0.92,1.0,1.1), col * vec3(1.06,1.0,0.92), smoothstep(0.25,0.9,l));
-      col = mix(vec3(l), col, 1.08);
+      col = mix(col * vec3(0.9,1.0,1.12), col * vec3(1.07,1.0,0.92), smoothstep(0.25,0.9,l));
+      col = mix(vec3(l), col, uSat);
+      col = (col - 0.5) * uContrast + 0.5;
+      if (uFilter == 1) { float g = dot(col, vec3(0.3,0.59,0.11)); col = vec3(smoothstep(0.02, 0.95, g)) * vec3(1.02,1.0,0.97); }
+      else if (uFilter == 2) { col = mix(col, col * vec3(0.7,1.05,1.35) + vec3(0.04,0.0,0.06) * (1.0 - l), 0.85); col = pow(max(col, 0.0), vec3(0.92)); }
+      else if (uFilter == 3) { col = mix(col, vec3(dot(col, vec3(0.33))), 0.25) * vec3(1.08,0.98,0.84) + vec3(0.03,0.02,0.0); }
+      else if (uFilter == 4) { col = mix(col, col * vec3(1.15,0.92,1.2) + 0.05, 0.6); }
       // vignette
       float v = smoothstep(0.95, 0.18, length(c * vec2(uRes.x/uRes.y, 1.0) * 0.72) * uVig);
       col *= mix(0.55, 1.0, v);
@@ -76,7 +104,7 @@ export class Engine {
 
     // 超軽量: no composer at all — render straight to the canvas with ACES (saves 3-4 full-screen passes + MSAA RT)
     this.post = Q.post;
-    this.final = { uniforms: { uWarp: { value: 0 }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2() } } };
+    this.final = { uniforms: THREE.UniformsUtils.clone(FinalShader.uniforms) }; // stub (超軽量): callers may set any uniform
     if (!this.post) { this._initCommon(canvas); return; }
     const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: QA ? 0 : Q.msaa });
     this.composer = new EffectComposer(renderer, rt);
@@ -90,6 +118,8 @@ export class Engine {
     // radius=0 -> factors are used verbatim (lerpBloomFactor mixes toward 1.2-f as radius grows)
     this.bloom.compositeMaterial.uniforms.bloomFactors.value = [1.0, 0.55, 0.22, 0.06, 0.0];
     if (!QA_OFF.bloom && Q.bloom) this.composer.addPass(this.bloom);
+    // anamorphic streaks on the hottest emitters (linear HDR, before tone mapping)
+    if (Q.streaks && !QA_OFF.bloom) { this.streaks = new StreakPass({ strength: SETTINGS.fx ? 0.55 : 0, threshold: 3.2 }); this.composer.addPass(this.streaks); }
     this.composer.addPass(new OutputPass());
     this.final = new ShaderPass(FinalShader);
     this.composer.addPass(this.final);
@@ -104,6 +134,8 @@ export class Engine {
     u.uCA.value = on ? 0.0022 : 0.0;
     u.uGrain.value = on ? 0.045 : 0.0;
     u.uVig.value = on ? 1.05 : 0.8;
+    this.lensFx = !!on;
+    if (this.streaks) this.streaks.strength = on ? 0.55 : 0;
   }
 
   _initCommon(canvas) {

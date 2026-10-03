@@ -24,10 +24,17 @@ export const PRESETS = {
     landscape: 0.75, steam: true, screensPerFrame: 3, anisotropy: 8,
   },
   high: {
-    label: '高画質', desc: 'ハイエンド端末向け。全エフェクト・最大解像度',
+    label: '高画質', desc: 'ハイエンド端末向け。全エフェクト・高解像度',
     dprCap: 2.25, dprFloor: 1.0, msaa: 4, bloom: true, post: true, shadows: true, shadowMap: 4096,
     reflection: true, reflScale: 0.6, hdr: true, loTex: false, canvasScale: 1, rainN: 14000, fpsCap: 0,
-    landscape: 1, steam: true, screensPerFrame: 3, anisotropy: 16,
+    landscape: 1, steam: true, screensPerFrame: 3, anisotropy: 16, streaks: true, volumetric: true, sky: 1,
+  },
+  // S (2026-10-03): the target device is a flagship Android in landscape fullscreen -> no compromises.
+  max: {
+    label: '最高', desc: 'フラッグシップ端末向け。光芒・光の円錐・密な遠景・最大解像度',
+    dprCap: 2.6, dprFloor: 1.25, msaa: 4, bloom: true, post: true, shadows: true, shadowMap: 4096,
+    reflection: true, reflScale: 0.75, hdr: true, loTex: false, canvasScale: 1, rainN: 22000, fpsCap: 0,
+    landscape: 1.3, steam: true, screensPerFrame: 5, anisotropy: 16, streaks: true, volumetric: true, sky: 1.5,
   },
 };
 
@@ -39,7 +46,9 @@ function autoPreset() {
     const ua = navigator.userAgent;
     const oldIOS = /OS (1[0-4])_/.test(ua);
     if (mem <= 2 || cores <= 3 || oldIOS) return 'ultra';
-    if (mem >= 8 && cores >= 8) return 'high';
+    // deviceMemory is capped at 8 by the spec: every current flagship reports 8 -> best preset
+    if (mem >= 8 && cores >= 8) return 'max';
+    if (mem >= 6 && cores >= 6) return 'high';
   } catch (e) { /* ignore */ }
   return 'standard';
 }

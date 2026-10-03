@@ -606,6 +606,13 @@ async function boot() {
       if (ok) setTimeout(f, 120);
     }
     engine.final.uniforms.uWarp.value = controls.warpAmt || 0;
+    // rain beads on the lens: build up while it rains (fx on), wiped off by a fast travel
+    {
+      const U = engine.final.uniforms;
+      const want = SETTINGS.rain && SETTINGS.fx && !photo.on ? 0.7 : 0;
+      U.uDrops.value += (want * (1 - (controls.warpAmt || 0)) - U.uDrops.value) * Math.min(1, dt * (want > U.uDrops.value ? 0.15 : 1.5));
+      U.uFlash.value = (sky.flash || 0) * 0.35 + (fx.flash || 0);
+    }
 
     sky.update(t, camera.position);
     LU.uPx.value = engine.renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
